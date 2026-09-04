@@ -1,12 +1,13 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Bed, Bath, Square, MapPin, ShieldCheck } from 'lucide-react';
+import { Bed, Bath, Square, MapPin, ShieldCheck, PencilLine, Users, Share2 } from 'lucide-react';
 import { mockProperties } from '@/data/mockData';
 import { propertyAPI } from '@/utils/api';
 import { formatAed } from '@/utils/listings';
-import { useAuth } from '@/context/AuthContext';
+import { AppUser, useAuth } from '@/context/AuthContext';
 import PropertyMediaSection from '@/components/Property/PropertyMediaSection';
 
 function readPropertyIdFromPath(): string | null {
@@ -36,19 +37,36 @@ function mockAsProperty(id: string) {
     mediaMeta: (mock as { mediaMeta?: { src: string; label: string }[] }).mediaMeta,
     walkthrough: Boolean((mock as { walkthrough?: boolean }).walkthrough),
     amenities: mock.amenities || [],
+    agentId: mock.agent?.id,
     agent: mock.agent,
   };
 }
 
+/** True when the signed-in dealer owns / is assigned to this listing. */
+function isAssignedListingAgent(user: AppUser | null, property: any): boolean {
+  if (!user || !property) return false;
+  const userIds = [user._id, user.id].filter(Boolean).map(String);
+  const listingAgentIds = [property.agentId, property.agent_id, property.agent?.id]
+    .filter(Boolean)
+    .map(String);
+  if (userIds.some((id) => listingAgentIds.includes(id))) return true;
+  const agentEmail = String(property.agent?.email || '').toLowerCase();
+  if (agentEmail && agentEmail === String(user.email || '').toLowerCase()) return true;
+  const agentName = String(property.agent?.name || '').trim().toLowerCase();
+  if (agentName && agentName === String(user.name || '').trim().toLowerCase()) return true;
+  return false;
+}
+
 export default function PropertyDetailClient() {
   const params = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, isDealer, loading: authLoading } = useAuth();
   const [propertyId, setPropertyId] = useState<string | null>(
     params?.id && params.id !== '_' ? params.id : null,
   );
   const [property, setProperty] = useState<any>(null);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
+  const [shareNote, setShareNote] = useState('');
   const [form, setForm] = useState({
     firstName: '',
     lastName: '',
@@ -65,11 +83,12 @@ export default function PropertyDetailClient() {
   }, [params?.id]);
 
   useEffect(() => {
-    if (user) {
+    // Only prefill inquire fields for buyers — dealers never see that form.
+    if (user && !isDealer) {
       const [first, ...rest] = (user.name || '').split(' ');
       setForm((f) => ({ ...f, firstName: first, lastName: rest.join(' '), email: user.email, phone: user.phone || '' }));
     }
-  }, [user]);
+  }, [user, isDealer]);
 
   useEffect(() => {
     if (!propertyId) return;
@@ -108,6 +127,24 @@ export default function PropertyDetailClient() {
       setError(err?.response?.data?.message || 'Could not send inquiry');
     }
   };
+
+  const onShare = async () => {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: property?.title, url });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setShareNote('Link copied');
+        setTimeout(() => setShareNote(''), 2000);
+      }
+    } catch {
+      /* user cancelled share */
+    }
+  };
+
+  const ownsListing = useMemo(() => isAssignedListingAgent(user, property), [user, property]);
+  const showDealerPanel = !authLoading && isDealer;
 
   if (error && !property) return <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-red-600">{error}</div>;
   if (!property) return <div className="px-4 py-16 text-center text-sm text-gray-500">Loading listing…</div>;
@@ -160,28 +197,69 @@ export default function PropertyDetailClient() {
         </div>
 
         <aside className="lg:col-span-2">
-          <form onSubmit={onInquire} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900">Inquire with the dealer</h2>
-            <p className="mt-1 text-sm text-gray-600">A dealer will follow up with matching options.</p>
-            {sent ? (
-              <p className="mt-6 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
-                Inquiry sent. A dealer will follow up, and matching inventory is already queued in their workspace.
+          {showDealerPanel ? (
+            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-primary-700">
+                {ownsListing ? 'Your listing' : 'Dealer workspace'}
               </p>
-            ) : (
-              <div className="mt-4 space-y-3">
-                <input required placeholder="First name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
-                <input placeholder="Last name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
-                <input required type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
-                <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
-                <input type="number" placeholder="Budget (AED)" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
-                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" rows={3} />
-                {error && <p className="text-xs text-red-600">{error}</p>}
-                <button type="submit" className="w-full rounded-full bg-primary-600 py-3 text-sm font-semibold text-white hover:bg-primary-700">
-                  Send inquiry
+              <h2 className="mt-1 text-lg font-semibold text-gray-900">
+                {ownsListing ? 'Manage this listing' : 'Public buyer view'}
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                {ownsListing
+                  ? 'Buyers see an inquire form here. Use your workspace to edit inventory and work CRM leads.'
+                  : 'You are signed in as a dealer, so the buyer inquire form is hidden. Open your workspace to manage your own inventory.'}
+              </p>
+              <div className="mt-5 space-y-2">
+                <Link
+                  href="/agent/listings"
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 py-3 text-sm font-semibold text-white hover:bg-primary-700"
+                >
+                  <PencilLine className="h-4 w-4" />
+                  {ownsListing ? 'Edit in My listings' : 'My listings'}
+                </Link>
+                <Link
+                  href="/agent/leads"
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                >
+                  <Users className="h-4 w-4" />
+                  View CRM leads
+                </Link>
+                <button
+                  type="button"
+                  onClick={onShare}
+                  className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share listing
                 </button>
+                {shareNote && <p className="text-center text-xs text-green-700">{shareNote}</p>}
               </div>
-            )}
-          </form>
+            </div>
+          ) : (
+            <form onSubmit={onInquire} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+              <h2 className="text-lg font-semibold text-gray-900">Inquire with the dealer</h2>
+              <p className="mt-1 text-sm text-gray-600">A dealer will follow up with matching options.</p>
+              {sent ? (
+                <p className="mt-6 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
+                  Inquiry sent. A dealer will follow up, and matching inventory is already queued in their workspace.
+                </p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  <input required placeholder="First name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
+                  <input placeholder="Last name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
+                  <input required type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
+                  <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
+                  <input type="number" placeholder="Budget (AED)" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
+                  <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" rows={3} />
+                  {error && <p className="text-xs text-red-600">{error}</p>}
+                  <button type="submit" className="w-full rounded-full bg-primary-600 py-3 text-sm font-semibold text-white hover:bg-primary-700">
+                    Send inquiry
+                  </button>
+                </div>
+              )}
+            </form>
+          )}
         </aside>
       </div>
     </div>
