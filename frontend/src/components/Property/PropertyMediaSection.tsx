@@ -7,10 +7,9 @@ import PropertyGallery, { type GalleryImage } from './PropertyGallery';
 import type { WalkthroughStop } from './HouseWalkthrough';
 
 const HouseWalkthrough = dynamic(() => import('./HouseWalkthrough'), {
-  ssr: false,
   loading: () => (
     <div className="flex h-64 items-center justify-center rounded-3xl border border-gray-200 bg-gray-50 text-sm text-gray-500">
-      Loading 3D walkthrough…
+      Loading walkthrough…
     </div>
   ),
 });
@@ -29,13 +28,14 @@ function toGallery(images: string[], mediaMeta?: { src: string; label: string }[
   return images.map((src, i) => ({ src, label: DEFAULT_LABELS[i] || `Photo ${i + 1}` }));
 }
 
-const WALKTHROUGH_POSITIONS: Record<string, [number, number, number]> = {
-  pool: [0, 0.5, 2.4],
-  living: [-1.2, 1.2, 0.2],
-  kitchen: [1.6, 1.15, 0.1],
-  bedroom: [0.5, 2.7, -0.4],
-  aerial: [2.8, 3.2, 2.2],
-  night: [-2.4, 1.4, 1.8],
+/** 2D floor-plan hotspot positions (percent of plan area). */
+const WALKTHROUGH_HOTSPOTS: Record<string, { x: number; y: number }> = {
+  pool: { x: 72, y: 78 },
+  living: { x: 28, y: 68 },
+  kitchen: { x: 55, y: 68 },
+  bedroom: { x: 38, y: 28 },
+  aerial: { x: 78, y: 22 },
+  night: { x: 18, y: 40 },
 };
 
 export default function PropertyMediaSection({
@@ -68,7 +68,7 @@ export default function PropertyMediaSection({
         id: `${id}-${index}`,
         label: item.label,
         src: item.src,
-        position: WALKTHROUGH_POSITIONS[id] || ([index * 0.6 - 1.5, 1.2, 1.5] as [number, number, number]),
+        hotspot: WALKTHROUGH_HOTSPOTS[id] || { x: 20 + index * 12, y: 45 + (index % 2) * 15 },
       };
     });
   }, [gallery]);
