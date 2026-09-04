@@ -76,25 +76,26 @@ export default function PropertyMediaSection({
   return (
     <div>
       {enableWalkthrough && (
-        <div className="mb-3 flex gap-2">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => setTab('photos')}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
-              tab === 'photos' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
+              tab === 'photos' ? 'bg-primary-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            <ImageIcon className="h-3.5 w-3.5" /> Photos
+            <ImageIcon className="h-4 w-4" /> Photos
           </button>
           <button
             type="button"
             onClick={() => setTab('walkthrough')}
-            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition ${
-              tab === 'walkthrough' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
+              tab === 'walkthrough' ? 'bg-primary-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            <View className="h-3.5 w-3.5" /> 3D walkthrough
+            <View className="h-4 w-4" /> 3D walkthrough
           </button>
+          <span className="text-xs text-gray-500">Switch tabs to tour rooms in 3D</span>
         </div>
       )}
 

@@ -15,7 +15,7 @@ type PropertyGalleryProps = {
 
 export default function PropertyGallery({ images, alt }: PropertyGalleryProps) {
   const [active, setActive] = useState(0);
-  const safeImages = images.length > 0 ? images : [{ src: '/properties/villa-pool-exterior.png', label: 'Exterior' }];
+  const safeImages = images.length > 0 ? images : [{ src: '/media/villa-pool-exterior.png', label: 'Exterior' }];
   const current = safeImages[Math.min(active, safeImages.length - 1)];
 
   const go = (delta: number) => {

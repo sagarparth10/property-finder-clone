@@ -19,8 +19,11 @@ export default {
 
       // Static export only prebuilds /properties/_/ — serve that shell for any detail ID.
       // (ASSETS SPA fallback would otherwise return the home page HTML with a 200.)
+      // Skip file-like segments so /properties/*.png is never rewritten to HTML.
       const propertyDetail = path.match(/^\/properties\/([^/]+)$/);
-      if (propertyDetail && propertyDetail[1] !== '_') {
+      const propertySegment = propertyDetail?.[1];
+      const looksLikeStaticFile = !!propertySegment && /\.[a-zA-Z0-9]{2,8}$/.test(propertySegment);
+      if (propertySegment && propertySegment !== '_' && !looksLikeStaticFile) {
         const shellUrl = new URL(request.url);
         shellUrl.pathname = '/properties/_/';
         return env.ASSETS.fetch(new Request(shellUrl.toString(), request));
@@ -30,6 +33,7 @@ export default {
         return env.ASSETS.fetch(request);
       }
       await ensureSeed(env);
+      await enrichDemoVillaMedia(env);
       const body = request.method === 'GET' || request.method === 'HEAD' ? null : await readJson(request);
       const res = await route(request, env, url, path, body);
       return cors(request, env, res);
@@ -711,6 +715,63 @@ async function aiChat(env: Env, body: any) {
   return json({ response: data?.message?.content || 'I could not generate a response at the moment.' });
 }
 
+async function enrichDemoVillaMedia(env: Env) {
+  const VILLA_IMAGES = [
+    '/media/villa-pool-exterior.png',
+    '/media/villa-living-room.png',
+    '/media/villa-kitchen.png',
+    '/media/villa-bedroom.png',
+    '/media/villa-aerial.png',
+    '/media/villa-night-exterior.png',
+  ];
+  const description =
+    'Contemporary two-story white villa with an infinity pool, warm teak soffits, floor-to-ceiling glass, and a built-in outdoor kitchen. Indoor-outdoor living across living, kitchen, and bedroom suites — ideal for families seeking a modern Jumeirah lifestyle.';
+
+  const byTitle = asList(
+    await sb(
+      env,
+      'properties?select=id,title,location,images&title=eq.Spacious%203BR%20Villa%20in%20Jumeirah&active=eq.true',
+    ),
+  );
+  const byLocation = asList(
+    await sb(
+      env,
+      'properties?select=id,title,location,images&location=ilike.*Jumeirah*&type=eq.sale&bedrooms=eq.3&active=eq.true',
+    ),
+  );
+  const seen = new Set<string>();
+  const rows = [...byTitle, ...byLocation].filter((row) => {
+    const id = String(row.id || '');
+    if (!id || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+
+  for (const row of rows) {
+    const title = String(row.title || '').toLowerCase();
+    const location = String(row.location || '').toLowerCase();
+    const isTarget =
+      title === 'spacious 3br villa in jumeirah' ||
+      (location.includes('jumeirah') && title.includes('villa'));
+    if (!isTarget) continue;
+
+    const images = Array.isArray(row.images) ? row.images : [];
+    const alreadyEnriched =
+      images.length >= 6 && String(images[0] || '').includes('/media/villa-pool-exterior.png');
+    if (alreadyEnriched) continue;
+
+    await sb(env, `properties?id=eq.${row.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        images: VILLA_IMAGES,
+        description,
+        furnished: true,
+        amenities: ['Garden', 'Pool', 'Parking', 'Maid Room', 'Outdoor Kitchen', 'Storage'],
+      }),
+    });
+  }
+}
+
 async function ensureSeed(env: Env) {
   const existing = await sb(env, 'users?select=id&limit=1');
   if (Array.isArray(existing) && existing.length > 0) return;
@@ -770,7 +831,8 @@ async function ensureSeed(env: Env) {
     },
     {
       title: 'Spacious 3BR Villa in Jumeirah',
-      description: 'Beautiful 3-bedroom villa with private garden and pool. Perfect for families.',
+      description:
+        'Contemporary two-story white villa with an infinity pool, warm teak soffits, floor-to-ceiling glass, and a built-in outdoor kitchen. Indoor-outdoor living across living, kitchen, and bedroom suites — ideal for families seeking a modern Jumeirah lifestyle.',
       type: 'sale',
       price: 1200000,
       location: 'Jumeirah, Dubai',
@@ -779,10 +841,17 @@ async function ensureSeed(env: Env) {
       bedrooms: 3,
       bathrooms: 3,
       area: 2800,
-      furnished: false,
+      furnished: true,
       verified: true,
-      images: ['https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800'],
-      amenities: ['Garden', 'Pool', 'Parking', 'Maid Room', 'Storage'],
+      images: [
+        '/media/villa-pool-exterior.png',
+        '/media/villa-living-room.png',
+        '/media/villa-kitchen.png',
+        '/media/villa-bedroom.png',
+        '/media/villa-aerial.png',
+        '/media/villa-night-exterior.png',
+      ],
+      amenities: ['Garden', 'Pool', 'Parking', 'Maid Room', 'Outdoor Kitchen', 'Storage'],
       agent_id: sarah.id,
       developer: 'Nakheel Properties',
       agent: { name: sarah.name, email: sarah.email },

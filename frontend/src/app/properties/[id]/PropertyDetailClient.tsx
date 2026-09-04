@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Bed, Bath, Square, MapPin, ShieldCheck, PencilLine, Users, Share2 } from 'lucide-react';
 import { mockProperties } from '@/data/mockData';
+import { isVillaDemoListing, withVillaDemoMedia } from '@/data/villaDemoMedia';
 import { propertyAPI } from '@/utils/api';
 import { formatAed } from '@/utils/listings';
 import { AppUser, useAuth } from '@/context/AuthContext';
@@ -99,13 +100,16 @@ export default function PropertyDetailClient() {
     propertyAPI
       .getById(propertyId)
       .then((data) => {
-        if (!cancelled) setProperty(data);
+        if (!cancelled) {
+          setProperty(isVillaDemoListing(data, propertyId) ? withVillaDemoMedia(data) : data);
+        }
       })
       .catch(() => {
         const fallback = mockAsProperty(propertyId);
         if (!cancelled) {
-          if (fallback) setProperty(fallback);
-          else setError('Listing not found');
+          if (fallback) {
+            setProperty(isVillaDemoListing(fallback, propertyId) ? withVillaDemoMedia(fallback) : fallback);
+          } else setError('Listing not found');
         }
       });
 
@@ -153,7 +157,8 @@ export default function PropertyDetailClient() {
     property.images?.length > 0
       ? property.images
       : [property.image || 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800'];
-  const enableWalkthrough = Boolean(property.walkthrough) || property.id === '2' || property._id === '2';
+  const enableWalkthrough =
+    Boolean(property.walkthrough) || isVillaDemoListing(property, propertyId);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
