@@ -153,7 +153,7 @@ export default function PropertyDetailClient() {
         <aside className="lg:col-span-2">
           <form onSubmit={onInquire} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900">Inquire with the dealer</h2>
-            <p className="mt-1 text-sm text-gray-600">Creates a CRM lead and auto-suggests similar listings to the assigned agent.</p>
+            <p className="mt-1 text-sm text-gray-600">A dealer will follow up with matching options.</p>
             {sent ? (
               <p className="mt-6 rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
                 Inquiry sent. A dealer will follow up, and matching inventory is already queued in their workspace.
