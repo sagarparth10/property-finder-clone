@@ -199,16 +199,14 @@ Avatar Animation + Audio Output
 
 ### Production Setup
 
-**Frontend**
-- Hosted on Vercel
-- CDN for static assets
-- Edge functions for API routes
+**Frontend + API**
+- Cloudflare Worker `property-nexus-api` serves the Next.js static export (`frontend/out`) and `/api/*`
+- Custom domain: https://property.cognaitive.in
+- Auto-deploy on push to `main` via GitHub Actions (`.github/workflows/deploy-cloudflare.yml`)
 
-**Backend**
-- Containerized with Docker
-- Deployed on AWS ECS or GCP Cloud Run
-- Auto-scaling based on load
-- Load balancer for traffic distribution
+**Legacy NestJS backend (optional / local)**
+- Containerized with Docker for local or alternate hosting
+- Auto-scaling based on load when self-hosted
 
 **Database**
 - MongoDB Atlas (cloud)

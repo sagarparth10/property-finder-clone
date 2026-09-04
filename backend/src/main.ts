@@ -31,7 +31,7 @@ async function bootstrap() {
         return;
       }
       const allowed = new Set([...configuredOrigins, ...localOrigins]);
-      if (allowed.has(origin) || /\.vercel\.app$/.test(origin)) {
+      if (allowed.has(origin) || /\.cognaitive\.in$/.test(origin)) {
         callback(null, true);
         return;
       }

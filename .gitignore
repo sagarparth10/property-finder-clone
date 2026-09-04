@@ -80,12 +80,20 @@ dmypy.json
 .DS_Store
 Thumbs.db
 
-# Next.js / Vercel / Nest build
+# Next.js / Vercel / Nest / Cloudflare build
 .next/
 .vercel/
 out/
 frontend/.next/
+frontend/out/
 backend/dist/
+workers/api/.wrangler/
+workers/api/.dev.vars
+.dev.vars
+.wrangler/
+workers/api/.supabase-keys.json
+workers/api/secrets.json
+supabase/.temp/
 
 # Project specific
 *.pyc

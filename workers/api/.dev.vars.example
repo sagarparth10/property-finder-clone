@@ -1,0 +1,4 @@
+SUPABASE_URL=https://YOUR-PROJECT.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+JWT_SECRET=replace-with-a-long-random-string
+OLLAMA_BASE_URL=https://ollama.cognaitive.in

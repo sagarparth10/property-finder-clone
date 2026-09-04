@@ -1,4 +1,4 @@
-# 🏠 Property Finder Clone - Next-Gen Real Estate Super App
+﻿# 🏠 Property Finder Clone - Next-Gen Real Estate Super App
 
 A modern, scalable real estate web application that combines the best features of Property Finder and Bayut, with advanced AI capabilities, 3D visualization, and multi-portal architecture.
 
@@ -102,18 +102,45 @@ Property_Finder_Clone/
 └── docs/                    # Documentation
 ```
 
-## 🚦 Getting Started
+
+## Getting Started
 
 ### Prerequisites
 
 - Node.js 18+
-- MongoDB 6+
-- Redis (for queues)
-- Ollama (local LLM runtime) with the model defined in `OLLAMA_MODEL` (default `llama3`)
-- Mapbox/Google Maps API Key (optional but recommended)
-- OpenAI API Key (optional if you plan to use the cloud provider)
+- Ollama (optional local LLM) with the model in `OLLAMA_MODEL` (default `llama3`)
+- Mapbox/Google Maps API Key (optional)
+- Supabase project for the Worker API (see `supabase/schema.sql`)
 
 ### Installation
 
 1. **Clone the repository**
+```bash
+git clone https://github.com/sagarparth10/property-finder-clone.git
+cd property-finder-clone
 ```
+
+2. **Frontend (local)**
+```bash
+cd frontend
+cp .env.example .env.local
+npm install
+npm run dev
+```
+
+3. **Cloudflare Worker API (local)**
+```bash
+cd workers/api
+cp .dev.vars.example .dev.vars
+npm install
+npm run dev
+```
+
+## Production
+
+Live site: **https://property.cognaitive.in**
+
+Hosted on Cloudflare Workers (`property-nexus-api`) with static assets from `frontend/out`.
+Auto-deploy on push to `main` — see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+This project is **not** deployed on Vercel.

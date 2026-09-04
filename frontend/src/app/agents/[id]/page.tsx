@@ -5,6 +5,10 @@ interface AgentProfilePageProps {
   params: { id: string };
 }
 
+export function generateStaticParams() {
+  return mockAgents.map((agent) => ({ id: agent.id }));
+}
+
 export default function AgentProfilePage({ params }: AgentProfilePageProps) {
   const agent = mockAgents.find((item) => item.id === params.id);
 
