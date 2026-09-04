@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ListingCard } from '@/components/ListingCard/ListingCard';
 import { AIAvatar } from '@/components/Avatar/AIAvatar';
 import { PropertyMap } from '@/components/Map/PropertyMap';
+import { AdvancedFiltersModal } from '@/components/Search/AdvancedFiltersModal';
 import {
   mockProperties,
   mockPriceTrends,
@@ -51,9 +52,17 @@ const WHY_CHOOS_US = [
 
 export default function Home() {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   return (
     <div className="space-y-24 pb-24">
+      <AdvancedFiltersModal
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        initialSearch={searchQuery}
+      />
+
       {/* Hero */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-primary-900 py-20 text-white">
         <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'url(/images/pattern-grid.svg)' }} />
@@ -76,10 +85,16 @@ export default function Home() {
                   <input
                     className="flex-1 bg-transparent text-sm outline-none"
                     placeholder="Search Dubai Marina apartments under AED 200k..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="inline-flex items-center gap-2 rounded-xl bg-white/20 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/30">
+                  <button
+                    type="button"
+                    onClick={() => setFiltersOpen(true)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-white/20 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/30"
+                  >
                     <Filter className="h-4 w-4" />
                     Advanced Filters
                   </button>

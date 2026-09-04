@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { ListingCard } from '@/components/ListingCard/ListingCard';
 import { mockProperties } from '@/data/mockData';
 import { propertyAPI } from '@/utils/api';
@@ -11,11 +12,48 @@ import { Filter, MapPinned } from 'lucide-react';
 const PROPERTY_TYPES = ['All', 'sale', 'rent'];
 const PRICE_BRACKETS = ['< AED 100K', 'AED 100K - 500K', 'AED 500K - 1M', 'AED 1M+'];
 
-export default function PropertiesPage() {
-  const [typeFilter, setTypeFilter] = useState('All');
-  const [priceFilter, setPriceFilter] = useState('');
+function matchesBedrooms(propertyBeds: number, filter: string) {
+  if (!filter) return true;
+  if (filter === '5+') return propertyBeds >= 5;
+  return propertyBeds === Number(filter);
+}
+
+function matchesBathrooms(propertyBaths: number, filter: string) {
+  if (!filter) return true;
+  if (filter === '4+') return propertyBaths >= 4;
+  return propertyBaths === Number(filter);
+}
+
+function matchesPrice(price: number, priceFilter: string) {
+  if (!priceFilter) return true;
+  if (priceFilter === '< AED 100K') return price < 100000;
+  if (priceFilter === 'AED 100K - 500K') return price >= 100000 && price <= 500000;
+  if (priceFilter === 'AED 500K - 1M') return price > 500000 && price <= 1000000;
+  if (priceFilter === 'AED 1M+') return price > 1000000;
+  return true;
+}
+
+function PropertiesContent() {
+  const params = useSearchParams();
+  const [typeFilter, setTypeFilter] = useState(params.get('type') || 'All');
+  const [priceFilter, setPriceFilter] = useState(params.get('price') || '');
+  const [bedroomsFilter, setBedroomsFilter] = useState(params.get('bedrooms') || '');
+  const [bathroomsFilter, setBathroomsFilter] = useState(params.get('bathrooms') || '');
+  const [locationFilter, setLocationFilter] = useState(params.get('location') || params.get('q') || '');
+  const [furnishedOnly, setFurnishedOnly] = useState(params.get('furnished') === '1');
+  const [verifiedOnly, setVerifiedOnly] = useState(params.get('verified') === '1');
   const [listings, setListings] = useState<any[]>(mockProperties);
   const [fromApi, setFromApi] = useState(false);
+
+  useEffect(() => {
+    setTypeFilter(params.get('type') || 'All');
+    setPriceFilter(params.get('price') || '');
+    setBedroomsFilter(params.get('bedrooms') || '');
+    setBathroomsFilter(params.get('bathrooms') || '');
+    setLocationFilter(params.get('location') || params.get('q') || '');
+    setFurnishedOnly(params.get('furnished') === '1');
+    setVerifiedOnly(params.get('verified') === '1');
+  }, [params]);
 
   useEffect(() => {
     propertyAPI
@@ -32,14 +70,30 @@ export default function PropertiesPage() {
 
   const filteredProperties = listings.filter((property) => {
     const matchesType = typeFilter === 'All' || property.type === typeFilter;
-    const matchesPrice =
-      !priceFilter ||
-      (priceFilter === '< AED 100K' && property.price < 100000) ||
-      (priceFilter === 'AED 100K - 500K' && property.price >= 100000 && property.price <= 500000) ||
-      (priceFilter === 'AED 500K - 1M' && property.price > 500000 && property.price <= 1000000) ||
-      (priceFilter === 'AED 1M+' && property.price > 1000000);
-    return matchesType && matchesPrice;
+    const matchesBudget = matchesPrice(property.price, priceFilter);
+    const matchesBeds = matchesBedrooms(property.bedrooms ?? 0, bedroomsFilter);
+    const matchesBaths = matchesBathrooms(property.bathrooms ?? 0, bathroomsFilter);
+    const locationQuery = locationFilter.trim().toLowerCase();
+    const matchesLocation =
+      !locationQuery ||
+      String(property.location || '').toLowerCase().includes(locationQuery) ||
+      String(property.title || '').toLowerCase().includes(locationQuery);
+    const matchesFurnished = !furnishedOnly || property.furnished;
+    const matchesVerified = !verifiedOnly || property.verified;
+    return (
+      matchesType &&
+      matchesBudget &&
+      matchesBeds &&
+      matchesBaths &&
+      matchesLocation &&
+      matchesFurnished &&
+      matchesVerified
+    );
   });
+
+  const activeExtras = [bedroomsFilter && `${bedroomsFilter} bed`, bathroomsFilter && `${bathroomsFilter} bath`, furnishedOnly && 'Furnished', verifiedOnly && 'Verified']
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
@@ -49,6 +103,11 @@ export default function PropertiesPage() {
           <p className="max-w-2xl text-sm text-gray-600">
             Live dealer inventory{fromApi ? ' from the marketplace API' : ' (demo catalog)'}. Inquire to create a lead the matching engine can assign.
           </p>
+          {(locationFilter || activeExtras) && (
+            <p className="text-sm font-medium text-primary-700">
+              Active filters: {[locationFilter, activeExtras].filter(Boolean).join(' · ')}
+            </p>
+          )}
         </div>
         <Link
           href="/login?next=/agent"
@@ -116,5 +175,19 @@ export default function PropertiesPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function PropertiesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-7xl px-4 py-16 text-sm text-gray-500 sm:px-6 lg:px-8">
+          Loading properties…
+        </div>
+      }
+    >
+      <PropertiesContent />
+    </Suspense>
   );
 }
