@@ -120,25 +120,22 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-white/10 bg-white/5 shadow-2xl backdrop-blur">
-            <div className="absolute inset-x-0 top-0 h-12 bg-gradient-to-r from-primary-500/80 to-primary-300/80" />
-            <div className="relative p-6">
-              <div className="flex items-center gap-3 text-sm text-white/80">
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-white/15 bg-white/10 shadow-2xl backdrop-blur-md">
+            <div className="relative p-4 sm:p-5">
+              <div className="mb-4 flex items-start gap-3 pr-1 text-sm text-white/80">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
                   <Building2 className="h-5 w-5" />
                 </span>
-                <div>
+                <div className="min-w-0">
                   <p className="font-semibold text-white">AI Concierge</p>
-                  <p>Ask anything about your next property journey.</p>
+                  <p className="text-white/75">Ask anything about your next property journey.</p>
                 </div>
               </div>
-              <div className="mt-4 rounded-2xl bg-white shadow-lg">
-                <AIAvatar
-                  onUserInput={(text) => console.log('Hero Avatar Input', text)}
-                  avatarResponse={null}
-                  isListening={false}
-                />
-              </div>
+              <AIAvatar
+                onUserInput={(text) => console.log('Hero Avatar Input', text)}
+                avatarResponse={null}
+                isListening={false}
+              />
             </div>
           </div>
         </div>
