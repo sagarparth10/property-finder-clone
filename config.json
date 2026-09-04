@@ -1,0 +1,58 @@
+{
+  "application": {
+    "name": "Property Finder Clone",
+    "version": "1.0.0",
+    "debug": false
+  },
+  "server": {
+    "host": "localhost",
+    "port": 8000,
+    "allowed_hosts": ["localhost", "127.0.0.1"]
+  },
+  "database": {
+    "engine": "sqlite3",
+    "name": "db.sqlite3",
+    "host": "localhost",
+    "port": 5432,
+    "user": "",
+    "password": ""
+  },
+  "api_keys": {
+    "google_maps": "",
+    "aws_access_key": "",
+    "aws_secret_key": ""
+  },
+  "features": {
+    "page_size": 20,
+    "max_upload_size": 5242880,
+    "supported_image_formats": ["jpg", "jpeg", "png", "gif", "webp"]
+  },
+  "paths": {
+    "static_url": "/static/",
+    "media_url": "/media/"
+  },
+  "email": {
+    "backend": "console",
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "use_tls": true
+  },
+  "cache": {
+    "backend": "locmem",
+    "timeout": 300
+  },
+  "celery": {
+    "broker_url": "redis://localhost:6379/0",
+    "result_backend": "redis://localhost:6379/0",
+    "timezone": "UTC"
+  },
+  "security": {
+    "secure_ssl_redirect": false,
+    "session_cookie_secure": false,
+    "csrf_cookie_secure": false,
+    "secure_browser_xss_filter": true,
+    "secure_content_type_nosniff": true,
+    "x_frame_options": "DENY"
+  }
+}
+
