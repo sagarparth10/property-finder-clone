@@ -126,18 +126,25 @@ export default function AgentProfilePage({ params }: AgentProfilePageProps) {
               </p>
             </div>
           </div>
-          <div className="mt-6 flex h-36 items-end gap-2 sm:gap-3">
-            {agent.monthlyDeals.map((item) => (
-              <div key={item.month} className="flex flex-1 flex-col items-center gap-2">
-                <span className="text-xs font-semibold text-gray-700">{item.deals}</span>
-                <div
-                  className="w-full rounded-t-md bg-primary-500/90"
-                  style={{ height: `${Math.max((item.deals / maxMonthlyDeals) * 100, 8)}%` }}
-                  title={`${item.month}: ${item.deals} deals`}
-                />
-                <span className="text-[11px] font-medium text-gray-500">{item.month}</span>
-              </div>
-            ))}
+          <div className="mt-6 flex h-32 gap-2 sm:gap-3">
+            {agent.monthlyDeals.map((item) => {
+              const barHeightPx = Math.max((item.deals / maxMonthlyDeals) * 96, 12);
+              return (
+                <div key={item.month} className="flex h-full min-w-0 flex-1 flex-col items-center">
+                  <div className="flex w-full flex-1 flex-col items-center justify-end gap-1">
+                    <span className="text-xs font-semibold text-gray-700">{item.deals}</span>
+                    <div
+                      className="w-full max-w-[2.75rem] rounded-t-md bg-primary-600"
+                      style={{ height: `${barHeightPx}px` }}
+                      title={`${item.month}: ${item.deals} deals`}
+                    />
+                  </div>
+                  <span className="mt-2 shrink-0 text-[11px] font-medium text-gray-500">
+                    {item.month}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
