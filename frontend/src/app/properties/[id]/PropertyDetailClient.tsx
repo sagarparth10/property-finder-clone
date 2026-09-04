@@ -7,6 +7,7 @@ import { mockProperties } from '@/data/mockData';
 import { propertyAPI } from '@/utils/api';
 import { formatAed } from '@/utils/listings';
 import { useAuth } from '@/context/AuthContext';
+import PropertyMediaSection from '@/components/Property/PropertyMediaSection';
 
 function readPropertyIdFromPath(): string | null {
   if (typeof window === 'undefined') return null;
@@ -32,6 +33,8 @@ function mockAsProperty(id: string) {
     furnished: mock.furnished,
     verified: mock.verified,
     images: mock.images || [mock.image],
+    mediaMeta: (mock as { mediaMeta?: { src: string; label: string }[] }).mediaMeta,
+    walkthrough: Boolean((mock as { walkthrough?: boolean }).walkthrough),
     amenities: mock.amenities || [],
     agent: mock.agent,
   };
@@ -109,16 +112,22 @@ export default function PropertyDetailClient() {
   if (error && !property) return <div className="mx-auto max-w-3xl px-4 py-16 text-sm text-red-600">{error}</div>;
   if (!property) return <div className="px-4 py-16 text-center text-sm text-gray-500">Loading listing…</div>;
 
-  const image = property.images?.[0] || 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800';
+  const images: string[] =
+    property.images?.length > 0
+      ? property.images
+      : [property.image || 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800'];
+  const enableWalkthrough = Boolean(property.walkthrough) || property.id === '2' || property._id === '2';
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="grid gap-10 lg:grid-cols-5">
         <div className="lg:col-span-3">
-          <div className="overflow-hidden rounded-3xl bg-gray-100">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={image} alt={property.title} className="h-80 w-full object-cover" />
-          </div>
+          <PropertyMediaSection
+            title={property.title}
+            images={images}
+            mediaMeta={property.mediaMeta}
+            enableWalkthrough={enableWalkthrough}
+          />
           <div className="mt-6 flex items-center gap-3">
             {property.verified && (
               <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
