@@ -51,7 +51,6 @@ const WHY_CHOOS_US = [
 
 export default function Home() {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
-  const [selectedProperty, setSelectedProperty] = useState<string | null>(null);
 
   return (
     <div className="space-y-24 pb-24">
@@ -174,11 +173,7 @@ export default function Home() {
         {viewMode === 'grid' ? (
           <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {mockProperties.slice(0, 6).map((property) => (
-              <ListingCard
-                key={property.id}
-                property={property}
-                onView={(id) => setSelectedProperty(id)}
-              />
+              <ListingCard key={property.id} property={property} />
             ))}
           </div>
         ) : (
@@ -192,7 +187,11 @@ export default function Home() {
                 price: p.price,
                 image: p.image,
               }))}
-              onPropertyClick={(id) => setSelectedProperty(id)}
+              onPropertyClick={(id) => {
+                if (typeof window !== 'undefined') {
+                  window.location.href = `/properties/${id}/`;
+                }
+              }}
             />
           </div>
         )}

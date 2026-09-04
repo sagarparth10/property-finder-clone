@@ -48,7 +48,7 @@ export default function MatchesPage() {
             </div>
             <div className="mt-4 flex gap-3">
               {row.property?._id && (
-                <Link href={`/properties/${row.property._id}`} className="text-sm font-semibold text-primary-600">
+                <Link href={`/properties/${row.property._id}/`} className="text-sm font-semibold text-primary-600">
                   View listing
                 </Link>
               )}

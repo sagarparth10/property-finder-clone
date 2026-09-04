@@ -20,7 +20,7 @@
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "html_handling": "force-trailing-slash",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/properties/*"]
   },
   "vars": {
     "FRONTEND_URL": "https://property.cognaitive.in",

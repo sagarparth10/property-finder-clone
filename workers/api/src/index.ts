@@ -16,6 +16,16 @@ export default {
     try {
       const url = new URL(request.url);
       const path = url.pathname.replace(/\/+$/, '') || '/';
+
+      // Static export only prebuilds /properties/_/ — serve that shell for any detail ID.
+      // (ASSETS SPA fallback would otherwise return the home page HTML with a 200.)
+      const propertyDetail = path.match(/^\/properties\/([^/]+)$/);
+      if (propertyDetail && propertyDetail[1] !== '_') {
+        const shellUrl = new URL(request.url);
+        shellUrl.pathname = '/properties/_/';
+        return env.ASSETS.fetch(new Request(shellUrl.toString(), request));
+      }
+
       if (!path.startsWith('/api')) {
         return env.ASSETS.fetch(request);
       }

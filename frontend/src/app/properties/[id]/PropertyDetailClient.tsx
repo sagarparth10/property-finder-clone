@@ -3,13 +3,46 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Bed, Bath, Square, MapPin, ShieldCheck } from 'lucide-react';
+import { mockProperties } from '@/data/mockData';
 import { propertyAPI } from '@/utils/api';
 import { formatAed } from '@/utils/listings';
 import { useAuth } from '@/context/AuthContext';
 
+function readPropertyIdFromPath(): string | null {
+  if (typeof window === 'undefined') return null;
+  const match = window.location.pathname.match(/\/properties\/([^/]+)/);
+  const id = match?.[1] ? decodeURIComponent(match[1]) : null;
+  return id && id !== '_' ? id : null;
+}
+
+function mockAsProperty(id: string) {
+  const mock = mockProperties.find((item) => item.id === id);
+  if (!mock) return null;
+  return {
+    id: mock.id,
+    _id: mock.id,
+    title: mock.title,
+    description: mock.description,
+    type: mock.type,
+    price: mock.price,
+    location: mock.location,
+    bedrooms: mock.bedrooms,
+    bathrooms: mock.bathrooms,
+    area: mock.area,
+    furnished: mock.furnished,
+    verified: mock.verified,
+    images: mock.images || [mock.image],
+    amenities: mock.amenities || [],
+    agent: mock.agent,
+  };
+}
+
 export default function PropertyDetailClient() {
   const params = useParams<{ id: string }>();
   const { user } = useAuth();
+  const [propertyId, setPropertyId] = useState<string | null>(
+    params?.id && params.id !== '_' ? params.id : null,
+  );
   const [property, setProperty] = useState<any>(null);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
@@ -23,6 +56,12 @@ export default function PropertyDetailClient() {
   });
 
   useEffect(() => {
+    const fromPath = readPropertyIdFromPath();
+    const fromParams = params?.id && params.id !== '_' ? params.id : null;
+    setPropertyId(fromPath || fromParams);
+  }, [params?.id]);
+
+  useEffect(() => {
     if (user) {
       const [first, ...rest] = (user.name || '').split(' ');
       setForm((f) => ({ ...f, firstName: first, lastName: rest.join(' '), email: user.email, phone: user.phone || '' }));
@@ -30,17 +69,34 @@ export default function PropertyDetailClient() {
   }, [user]);
 
   useEffect(() => {
-    if (!params.id) return;
+    if (!propertyId) return;
+    let cancelled = false;
+    setError('');
+    setProperty(null);
+
     propertyAPI
-      .getById(params.id)
-      .then(setProperty)
-      .catch(() => setError('Listing not found'));
-  }, [params.id]);
+      .getById(propertyId)
+      .then((data) => {
+        if (!cancelled) setProperty(data);
+      })
+      .catch(() => {
+        const fallback = mockAsProperty(propertyId);
+        if (!cancelled) {
+          if (fallback) setProperty(fallback);
+          else setError('Listing not found');
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [propertyId]);
 
   const onInquire = async (e: FormEvent) => {
     e.preventDefault();
+    if (!propertyId) return;
     try {
-      await propertyAPI.inquire(params.id, {
+      await propertyAPI.inquire(propertyId, {
         ...form,
         budget: form.budget ? Number(form.budget) : undefined,
       });
