@@ -4,6 +4,10 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { ListingCard } from '@/components/ListingCard/ListingCard';
 import { AIAvatar } from '@/components/Avatar/AIAvatar';
+import {
+  ConciergeLang,
+  getConciergeCopy,
+} from '@/components/Avatar/conciergeI18n';
 import { PropertyMap } from '@/components/Map/PropertyMap';
 import { AdvancedFiltersModal } from '@/components/Search/AdvancedFiltersModal';
 import {
@@ -54,6 +58,9 @@ export default function Home() {
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [conciergeLang, setConciergeLang] = useState<ConciergeLang>('en');
+  const conciergeCopy = getConciergeCopy(conciergeLang);
+  const conciergeRtl = conciergeLang === 'ar';
 
   return (
     <div className="space-y-24 pb-24">
@@ -134,21 +141,27 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-white/15 bg-white/10 shadow-2xl backdrop-blur-md">
+          <div
+            dir={conciergeRtl ? 'rtl' : 'ltr'}
+            className="relative w-full max-w-xl overflow-hidden rounded-3xl border border-white/15 bg-white/10 shadow-2xl backdrop-blur-md"
+          >
             <div className="relative p-4 sm:p-5">
-              <div className="mb-4 flex items-start gap-3 pr-1 text-sm text-white/80">
+              <div className="mb-4 flex items-start gap-3 text-sm text-white/80">
                 <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/15">
                   <Building2 className="h-5 w-5" />
                 </span>
                 <div className="min-w-0">
-                  <p className="font-semibold text-white">AI Concierge</p>
-                  <p className="text-white/75">Ask anything about your next property journey.</p>
+                  <p className="font-semibold text-white">{conciergeCopy.title}</p>
+                  <p className="text-white/75">{conciergeCopy.tagline}</p>
                 </div>
               </div>
               {/* Isolate from hero `text-white` so Concierge copy stays readable */}
               <div className="text-primary-900">
                 <AIAvatar
-                  onUserInput={(text) => console.log('Hero Avatar Input', text)}
+                  onUserInput={(text, language) =>
+                    console.log('Hero Avatar Input', { text, language })
+                  }
+                  onLanguageChange={setConciergeLang}
                   avatarResponse={null}
                   isListening={false}
                 />

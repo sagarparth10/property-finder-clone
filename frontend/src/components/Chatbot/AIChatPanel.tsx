@@ -1,9 +1,15 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { aiAPI } from '@/utils/api';
 import { Send, Loader2, Sparkles } from 'lucide-react';
 import { ChatMarkdown } from './ChatMarkdown';
+import {
+  ConciergeLang,
+  getConciergeCopy,
+  isConciergeLang,
+} from '@/components/Avatar/conciergeI18n';
 
 export type ChatRole = 'assistant' | 'user';
 
@@ -14,31 +20,38 @@ export interface ConversationMessage {
   timestamp: number;
 }
 
-const defaultAssistantGreeting =
-  "Hi there! I'm the Property Nexus AI concierge. Ask me about neighborhoods, investment yields, or how to collaborate with agents and lawyers.";
-
-const presetPrompts = [
-  'Show me 2-bedroom apartments in Dubai Marina under AED 180k with marina views.',
-  'Explain the legal steps to purchase an off-plan villa in Dubai.',
-  'Compare average ROI between Downtown and Business Bay.',
-  'What mortgage options can I explore with a 20% down payment?',
-];
-
-const createId = () => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+const createId = () =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
 
 export function AIChatPanel() {
-  const [messages, setMessages] = useState<ConversationMessage[]>([
-    {
-      id: createId(),
-      role: 'assistant',
-      content: defaultAssistantGreeting,
-      timestamp: Date.now(),
-    },
-  ]);
+  const searchParams = useSearchParams();
+  const langParam = searchParams.get('lang');
+  const lang: ConciergeLang = isConciergeLang(langParam) ? langParam : 'en';
+  const copy = getConciergeCopy(lang);
+  const isRtl = lang === 'ar';
+
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const greetingLangRef = useRef<ConciergeLang | null>(null);
+
+  useEffect(() => {
+    if (greetingLangRef.current === lang) return;
+    greetingLangRef.current = lang;
+    setMessages([
+      {
+        id: createId(),
+        role: 'assistant',
+        content: copy.greeting,
+        timestamp: Date.now(),
+      },
+    ]);
+    setError(null);
+  }, [lang, copy.greeting]);
 
   const chatHistoryForApi = useMemo(
     () =>
@@ -50,7 +63,10 @@ export function AIChatPanel() {
 
   useEffect(() => {
     if (!scrollContainerRef.current) return;
-    scrollContainerRef.current.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: 'smooth' });
+    scrollContainerRef.current.scrollTo({
+      top: scrollContainerRef.current.scrollHeight,
+      behavior: 'smooth',
+    });
   }, [messages, isLoading]);
 
   const handleSend = async (prompt?: string) => {
@@ -69,49 +85,92 @@ export function AIChatPanel() {
     setError(null);
     setIsLoading(true);
 
-    try {
-      const history = chatHistoryForApi.slice(-12);
+    const assistantId = createId();
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: assistantId,
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+      },
+    ]);
 
-      const response = await aiAPI.chat(text, {
+    try {
+      // Exclude the greeting-only turn and the empty assistant placeholder.
+      const history = chatHistoryForApi
+        .filter((entry) => entry.content.trim().length > 0)
+        .slice(-8);
+
+      let receivedToken = false;
+      const reply = await aiAPI.chatStream(text, {
         history,
+        language: lang,
+        onToken: (token) => {
+          if (!receivedToken) {
+            receivedToken = true;
+            setIsLoading(false);
+          }
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantId
+                ? { ...msg, content: msg.content + token }
+                : msg,
+            ),
+          );
+        },
       });
 
-      const reply = (response?.response as string) || 'I could not generate a response at the moment. Please try again.';
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: createId(),
-          role: 'assistant',
-          content: reply,
-          timestamp: Date.now(),
-        },
-      ]);
-    } catch (err: any) {
+      if (!reply.trim()) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantId
+              ? {
+                  ...msg,
+                  content:
+                    'I could not generate a response at the moment. Please try again.',
+                }
+              : msg,
+          ),
+        );
+      }
+    } catch (err: unknown) {
       console.error('AI chat error', err);
-      setError('Unable to contact the AI engine. Please try again in a moment.');
+      setMessages((prev) => prev.filter((msg) => msg.id !== assistantId));
+      setError(copy.errorContact);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex h-full flex-col rounded-3xl border border-gray-200 bg-white shadow-sm">
+    <div
+      dir={isRtl ? 'rtl' : 'ltr'}
+      className="flex h-full flex-col rounded-3xl border border-gray-200 bg-white shadow-sm"
+    >
       <div className="border-b border-gray-200 px-6 py-4">
         <div className="flex items-center gap-3">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50">
             <Sparkles className="h-5 w-5 text-primary-600" />
           </span>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">AI Concierge</h2>
-            <p className="text-xs text-gray-500">Ask about listings, neighborhoods, and financing</p>
+            <h2 className="text-lg font-semibold text-gray-900">{copy.title}</h2>
+            <p className="text-xs text-gray-500">{copy.panelSubtitle}</p>
           </div>
         </div>
       </div>
 
       <div ref={scrollContainerRef} className="flex-1 space-y-4 overflow-y-auto p-6">
-        {messages.map((message) => (
-          <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+        {messages.map((message) => {
+          // Hide empty placeholder bubble until the first streamed token arrives.
+          if (message.role === 'assistant' && !message.content && isLoading) {
+            return null;
+          }
+          return (
+          <div
+            key={message.id}
+            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          >
             <div
               className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm transition ${
                 message.role === 'user'
@@ -122,24 +181,28 @@ export function AIChatPanel() {
               <ChatMarkdown content={message.content} variant={message.role} />
             </div>
           </div>
-        ))}
+          );
+        })}
         {isLoading && (
           <div className="flex justify-start">
             <div className="inline-flex items-center gap-2 rounded-2xl bg-gray-100 px-3 py-2 text-sm text-gray-600">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Thinking...
+              {copy.thinking}
             </div>
           </div>
         )}
       </div>
 
       <div className="border-t border-gray-200 px-6 py-4">
-        {error && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
+        {error && (
+          <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>
+        )}
 
         <div className="flex flex-wrap gap-2 pb-3">
-          {presetPrompts.map((prompt) => (
+          {copy.prompts.map((prompt) => (
             <button
               key={prompt}
+              type="button"
               onClick={() => handleSend(prompt)}
               className="rounded-full border border-primary-100 bg-primary-50 px-3 py-1 text-xs font-medium text-primary-700 transition hover:bg-primary-100"
             >
@@ -159,14 +222,14 @@ export function AIChatPanel() {
             rows={1}
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="Ask about listings, financing, or legal workflows..."
+            placeholder={copy.chatPlaceholder}
             className="flex-1 resize-none bg-transparent text-sm focus:outline-none"
           />
           <button
             type="submit"
             className="inline-flex items-center justify-center rounded-full bg-primary-600 p-2 text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-primary-200"
             disabled={isLoading || input.trim().length === 0}
-            aria-label="Send message"
+            aria-label={copy.sendAria}
           >
             {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </button>

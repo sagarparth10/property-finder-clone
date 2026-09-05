@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { Suspense } from 'react';
 import { AIChatPanel } from '@/components/Chatbot/AIChatPanel';
 import { ShieldCheck } from 'lucide-react';
 
@@ -12,7 +13,15 @@ export default function AIAssistantPage() {
     <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
       <div className="grid gap-12 lg:grid-cols-3">
         <section className="lg:col-span-2">
-          <AIChatPanel />
+          <Suspense
+            fallback={
+              <div className="flex h-96 items-center justify-center rounded-3xl border border-gray-200 bg-white text-sm text-gray-500 shadow-sm">
+                Loading concierge…
+              </div>
+            }
+          >
+            <AIChatPanel />
+          </Suspense>
         </section>
 
         <aside>
