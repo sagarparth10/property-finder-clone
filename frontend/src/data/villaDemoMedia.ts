@@ -49,7 +49,15 @@ export function isVillaDemoListing(property: any, propertyId?: string | null): b
 
   const title = String(property?.title || '').toLowerCase();
   const location = String(property?.location || '').toLowerCase();
-  if (location.includes('jumeirah') && title.includes('villa') && (title.includes('3br') || title.includes('3 br') || title.includes('infinity') || title.includes('spacious'))) {
+  // Palm penthouse shares "Jumeirah" in location — never treat it as the villa demo.
+  if (title.includes('penthouse') || title.includes('palm jumeirah') || location.startsWith('palm')) {
+    return false;
+  }
+  if (
+    location.includes('jumeirah') &&
+    title.includes('villa') &&
+    (title.includes('3br') || title.includes('3 br') || title.includes('infinity') || title.includes('spacious'))
+  ) {
     return true;
   }
 

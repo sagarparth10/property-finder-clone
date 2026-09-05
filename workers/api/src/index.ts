@@ -34,6 +34,7 @@ export default {
       }
       await ensureSeed(env);
       await enrichDemoVillaMedia(env);
+      await enrichDemoPenthouseMedia(env);
       const body = request.method === 'GET' || request.method === 'HEAD' ? null : await readJson(request);
       const res = await route(request, env, url, path, body);
       return cors(request, env, res);
@@ -752,12 +753,13 @@ async function enrichDemoVillaMedia(env: Env) {
     const location = String(row.location || '').toLowerCase();
     const isTarget =
       title === 'spacious 3br villa in jumeirah' ||
-      (location.includes('jumeirah') && title.includes('villa'));
+      (location.includes('jumeirah') && !location.includes('palm') && title.includes('villa'));
     if (!isTarget) continue;
 
     const images = Array.isArray(row.images) ? row.images : [];
+    // Accept .png or .webp so a parallel media-compression pass is not overwritten.
     const alreadyEnriched =
-      images.length >= 6 && String(images[0] || '').includes('/media/villa-pool-exterior.webp');
+      images.length >= 6 && /\/media\/villa-pool-exterior\.(webp|png)/.test(String(images[0] || ''));
     if (alreadyEnriched) continue;
 
     await sb(env, `properties?id=eq.${row.id}`, {
@@ -768,6 +770,36 @@ async function enrichDemoVillaMedia(env: Env) {
         furnished: true,
         amenities: ['Garden', 'Pool', 'Parking', 'Maid Room', 'Outdoor Kitchen', 'Storage'],
       }),
+    });
+  }
+}
+
+/** Palm penthouse previously reused Unsplash photo-1613490493576 (white villa + pool) — same look as villa demo media. */
+const PENTHOUSE_IMAGES = [
+  'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800',
+  'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800',
+  'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800',
+];
+
+async function enrichDemoPenthouseMedia(env: Env) {
+  const byTitle = asList(
+    await sb(
+      env,
+      'properties?select=id,title,location,images&title=eq.Premium%204BR%20Penthouse%20in%20Palm%20Jumeirah&active=eq.true',
+    ),
+  );
+  for (const row of byTitle) {
+    const images = Array.isArray(row.images) ? row.images : [];
+    const hero = String(images[0] || '');
+    const needsFix =
+      !hero ||
+      hero.includes('photo-1613490493576') ||
+      /\/media\/villa-/.test(hero);
+    if (!needsFix) continue;
+
+    await sb(env, `properties?id=eq.${row.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ images: PENTHOUSE_IMAGES }),
     });
   }
 }
@@ -869,7 +901,11 @@ async function ensureSeed(env: Env) {
       area: 4500,
       furnished: true,
       verified: true,
-      images: ['https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800'],
+      images: [
+        'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800',
+        'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800',
+        'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800',
+      ],
       amenities: ['Gym', 'Pool', 'Beach', 'Concierge', 'Parking'],
       agent_id: sarah.id,
       developer: 'Damac Properties',

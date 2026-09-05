@@ -110,7 +110,7 @@ export const mockProperties = [
     type: 'sale',
     furnished: true,
     verified: true,
-    image: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800',
+    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800',
     amenities: ['Gym', 'Pool', 'Beach', 'Concierge', 'Parking', 'Balcony', 'Private Elevator'],
     description: 'Exclusive penthouse with panoramic sea views and premium finishes.',
     agent: {
@@ -126,7 +126,9 @@ export const mockProperties = [
       verified: true,
     },
     images: [
-      'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800',
+      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800',
+      'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800',
+      'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800',
     ],
     availability: 'available',
     createdAt: '2025-01-05',
