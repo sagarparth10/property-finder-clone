@@ -17,14 +17,19 @@ const HouseWalkthrough = dynamic(() => import('./HouseWalkthrough'), {
 type PropertyMediaSectionProps = {
   title: string;
   images: string[];
-  mediaMeta?: { src: string; label: string }[];
+  mediaMeta?: { src: string; thumbSrc?: string; label: string }[];
   enableWalkthrough?: boolean;
 };
 
 const DEFAULT_LABELS = ['Exterior', 'Living room', 'Kitchen', 'Bedroom', 'Aerial', 'Night view'];
 
-function toGallery(images: string[], mediaMeta?: { src: string; label: string }[]): GalleryImage[] {
-  if (mediaMeta?.length) return mediaMeta.map((m) => ({ src: m.src, label: m.label }));
+function toGallery(
+  images: string[],
+  mediaMeta?: { src: string; thumbSrc?: string; label: string }[]
+): GalleryImage[] {
+  if (mediaMeta?.length) {
+    return mediaMeta.map((m) => ({ src: m.src, thumbSrc: m.thumbSrc, label: m.label }));
+  }
   return images.map((src, i) => ({ src, label: DEFAULT_LABELS[i] || `Photo ${i + 1}` }));
 }
 

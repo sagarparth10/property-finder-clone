@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 export type GalleryImage = {
   src: string;
+  /** Optional smaller image for the thumbnail strip (avoids loading full-res 6×). */
+  thumbSrc?: string;
   label: string;
 };
 
@@ -15,20 +17,61 @@ type PropertyGalleryProps = {
 
 export default function PropertyGallery({ images, alt }: PropertyGalleryProps) {
   const [active, setActive] = useState(0);
-  const safeImages = images.length > 0 ? images : [{ src: '/media/villa-pool-exterior.png', label: 'Exterior' }];
+  const safeImages =
+    images.length > 0
+      ? images
+      : [
+          {
+            src: '/media/villa-pool-exterior.webp',
+            thumbSrc: '/media/villa-pool-exterior-thumb.webp',
+            label: 'Exterior',
+          },
+        ];
   const current = safeImages[Math.min(active, safeImages.length - 1)];
 
   const go = (delta: number) => {
     setActive((i) => (i + delta + safeImages.length) % safeImages.length);
   };
 
+  // Preload only the active hero (and adjacent for snappy arrows) — not all 6 full-res.
+  useEffect(() => {
+    const len = safeImages.length;
+    if (len === 0) return;
+    const toPreload = [
+      safeImages[active]?.src,
+      safeImages[(active + 1) % len]?.src,
+      safeImages[(active - 1 + len) % len]?.src,
+    ].filter(Boolean) as string[];
+
+    const unique = [...new Set(toPreload)];
+    const links: HTMLLinkElement[] = [];
+    for (const href of unique) {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'image';
+      link.href = href;
+      document.head.appendChild(link);
+      links.push(link);
+    }
+    return () => {
+      links.forEach((l) => l.remove());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- preload from stable src list + active index
+  }, [active, images]);
+
   return (
     <div>
       <div className="relative overflow-hidden rounded-3xl bg-gray-100">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          key={current.src}
           src={current.src}
           alt={`${alt} — ${current.label}`}
+          width={1600}
+          height={900}
+          decoding="async"
+          fetchPriority="high"
+          loading="eager"
           className="h-64 w-full object-cover sm:h-80 lg:h-[28rem]"
         />
         <div className="absolute bottom-3 left-3 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
@@ -72,7 +115,15 @@ export default function PropertyGallery({ images, alt }: PropertyGalleryProps) {
               aria-label={`View ${img.label}`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={img.src} alt="" className="h-full w-full object-cover" />
+              <img
+                src={img.thumbSrc || img.src}
+                alt=""
+                width={400}
+                height={225}
+                loading="lazy"
+                decoding="async"
+                className="h-full w-full object-cover"
+              />
             </button>
           ))}
         </div>

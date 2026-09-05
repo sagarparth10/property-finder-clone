@@ -717,12 +717,12 @@ async function aiChat(env: Env, body: any) {
 
 async function enrichDemoVillaMedia(env: Env) {
   const VILLA_IMAGES = [
-    '/media/villa-pool-exterior.png',
-    '/media/villa-living-room.png',
-    '/media/villa-kitchen.png',
-    '/media/villa-bedroom.png',
-    '/media/villa-aerial.png',
-    '/media/villa-night-exterior.png',
+    '/media/villa-pool-exterior.webp',
+    '/media/villa-living-room.webp',
+    '/media/villa-kitchen.webp',
+    '/media/villa-bedroom.webp',
+    '/media/villa-aerial.webp',
+    '/media/villa-night-exterior.webp',
   ];
   const description =
     'Contemporary two-story white villa with an infinity pool, warm teak soffits, floor-to-ceiling glass, and a built-in outdoor kitchen. Indoor-outdoor living across living, kitchen, and bedroom suites — ideal for families seeking a modern Jumeirah lifestyle.';
@@ -757,7 +757,7 @@ async function enrichDemoVillaMedia(env: Env) {
 
     const images = Array.isArray(row.images) ? row.images : [];
     const alreadyEnriched =
-      images.length >= 6 && String(images[0] || '').includes('/media/villa-pool-exterior.png');
+      images.length >= 6 && String(images[0] || '').includes('/media/villa-pool-exterior.webp');
     if (alreadyEnriched) continue;
 
     await sb(env, `properties?id=eq.${row.id}`, {
@@ -844,12 +844,12 @@ async function ensureSeed(env: Env) {
       furnished: true,
       verified: true,
       images: [
-        '/media/villa-pool-exterior.png',
-        '/media/villa-living-room.png',
-        '/media/villa-kitchen.png',
-        '/media/villa-bedroom.png',
-        '/media/villa-aerial.png',
-        '/media/villa-night-exterior.png',
+        '/media/villa-pool-exterior.webp',
+        '/media/villa-living-room.webp',
+        '/media/villa-kitchen.webp',
+        '/media/villa-bedroom.webp',
+        '/media/villa-aerial.webp',
+        '/media/villa-night-exterior.webp',
       ],
       amenities: ['Garden', 'Pool', 'Parking', 'Maid Room', 'Outdoor Kitchen', 'Storage'],
       agent_id: sarah.id,

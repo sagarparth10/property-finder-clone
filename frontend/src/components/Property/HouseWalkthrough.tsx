@@ -92,6 +92,10 @@ export default function HouseWalkthrough({ stops }: HouseWalkthroughProps) {
               key={active.id}
               src={active.src}
               alt={active.label}
+              width={1600}
+              height={900}
+              loading="eager"
+              decoding="async"
               className="h-56 w-full object-cover transition-opacity duration-300 sm:h-64 lg:h-full lg:min-h-[340px]"
             />
             <div className="absolute left-3 top-3 rounded-full bg-black/55 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">

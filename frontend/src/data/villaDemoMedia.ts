@@ -2,21 +2,45 @@
 export const VILLA_DEMO_API_ID = 'e76b5ab7-b3d0-43a2-ba28-11b4bb5dfd89';
 
 export const VILLA_DEMO_IMAGES = [
-  '/media/villa-pool-exterior.png',
-  '/media/villa-living-room.png',
-  '/media/villa-kitchen.png',
-  '/media/villa-bedroom.png',
-  '/media/villa-aerial.png',
-  '/media/villa-night-exterior.png',
+  '/media/villa-pool-exterior.webp',
+  '/media/villa-living-room.webp',
+  '/media/villa-kitchen.webp',
+  '/media/villa-bedroom.webp',
+  '/media/villa-aerial.webp',
+  '/media/villa-night-exterior.webp',
 ] as const;
 
-export const VILLA_DEMO_MEDIA_META: { src: string; label: string }[] = [
-  { src: '/media/villa-pool-exterior.png', label: 'Pool exterior' },
-  { src: '/media/villa-living-room.png', label: 'Living room' },
-  { src: '/media/villa-kitchen.png', label: 'Kitchen' },
-  { src: '/media/villa-bedroom.png', label: 'Bedroom' },
-  { src: '/media/villa-aerial.png', label: 'Aerial' },
-  { src: '/media/villa-night-exterior.png', label: 'Night exterior' },
+export const VILLA_DEMO_MEDIA_META: { src: string; thumbSrc?: string; label: string }[] = [
+  {
+    src: '/media/villa-pool-exterior.webp',
+    thumbSrc: '/media/villa-pool-exterior-thumb.webp',
+    label: 'Pool exterior',
+  },
+  {
+    src: '/media/villa-living-room.webp',
+    thumbSrc: '/media/villa-living-room-thumb.webp',
+    label: 'Living room',
+  },
+  {
+    src: '/media/villa-kitchen.webp',
+    thumbSrc: '/media/villa-kitchen-thumb.webp',
+    label: 'Kitchen',
+  },
+  {
+    src: '/media/villa-bedroom.webp',
+    thumbSrc: '/media/villa-bedroom-thumb.webp',
+    label: 'Bedroom',
+  },
+  {
+    src: '/media/villa-aerial.webp',
+    thumbSrc: '/media/villa-aerial-thumb.webp',
+    label: 'Aerial',
+  },
+  {
+    src: '/media/villa-night-exterior.webp',
+    thumbSrc: '/media/villa-night-exterior-thumb.webp',
+    label: 'Night exterior',
+  },
 ];
 
 export function isVillaDemoListing(property: any, propertyId?: string | null): boolean {
