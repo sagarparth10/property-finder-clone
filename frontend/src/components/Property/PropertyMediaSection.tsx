@@ -21,16 +21,40 @@ type PropertyMediaSectionProps = {
   enableWalkthrough?: boolean;
 };
 
-const DEFAULT_LABELS = ['Exterior', 'Living room', 'Kitchen', 'Bedroom', 'Aerial', 'Night view'];
+/** Infer a room/view label from path or filename — never assume Exterior for unknown photos. */
+function inferLabelFromSrc(src: string, index: number): string {
+  const name = decodeURIComponent(String(src || '')).toLowerCase();
+  const rules: [RegExp, string][] = [
+    [/living/, 'Living room'],
+    [/kitchen/, 'Kitchen'],
+    [/bedroom|master-bed|\bbed\b/, 'Bedroom'],
+    [/bath/, 'Bathroom'],
+    [/dining/, 'Dining'],
+    [/balcony|terrace/, 'Balcony'],
+    [/workspace|office|study/, 'Workspace'],
+    [/pool/, 'Pool'],
+    [/aerial|drone/, 'Aerial'],
+    [/night/, 'Night exterior'],
+    [/exterior|facade|building|street/, 'Exterior'],
+  ];
+  for (const [re, label] of rules) {
+    if (re.test(name)) return label;
+  }
+  return index === 0 ? 'Photo' : `Photo ${index + 1}`;
+}
 
 function toGallery(
   images: string[],
   mediaMeta?: { src: string; thumbSrc?: string; label: string }[]
 ): GalleryImage[] {
   if (mediaMeta?.length) {
-    return mediaMeta.map((m) => ({ src: m.src, thumbSrc: m.thumbSrc, label: m.label }));
+    return mediaMeta.map((m) => ({
+      src: m.src,
+      thumbSrc: m.thumbSrc,
+      label: m.label?.trim() || inferLabelFromSrc(m.src, 0),
+    }));
   }
-  return images.map((src, i) => ({ src, label: DEFAULT_LABELS[i] || `Photo ${i + 1}` }));
+  return images.map((src, i) => ({ src, label: inferLabelFromSrc(src, i) }));
 }
 
 /** 2D floor-plan hotspot positions (percent of plan area). */
@@ -39,8 +63,13 @@ const WALKTHROUGH_HOTSPOTS: Record<string, { x: number; y: number }> = {
   living: { x: 28, y: 68 },
   kitchen: { x: 55, y: 68 },
   bedroom: { x: 38, y: 28 },
+  bathroom: { x: 62, y: 32 },
+  balcony: { x: 82, y: 55 },
+  dining: { x: 45, y: 55 },
+  workspace: { x: 22, y: 35 },
   aerial: { x: 78, y: 22 },
   night: { x: 18, y: 40 },
+  exterior: { x: 70, y: 75 },
 };
 
 export default function PropertyMediaSection({
@@ -56,7 +85,7 @@ export default function PropertyMediaSection({
     return gallery.slice(0, 6).map((item, index) => {
       const key = item.label.toLowerCase();
       const id =
-        key.includes('pool') || key.includes('exterior')
+        key.includes('pool')
           ? 'pool'
           : key.includes('living')
             ? 'living'
@@ -64,11 +93,21 @@ export default function PropertyMediaSection({
               ? 'kitchen'
               : key.includes('bed')
                 ? 'bedroom'
-                : key.includes('aerial')
-                  ? 'aerial'
-                  : key.includes('night')
-                    ? 'night'
-                    : `stop-${index}`;
+                : key.includes('bath')
+                  ? 'bathroom'
+                  : key.includes('balcony') || key.includes('terrace')
+                    ? 'balcony'
+                    : key.includes('dining')
+                      ? 'dining'
+                      : key.includes('workspace') || key.includes('office')
+                        ? 'workspace'
+                        : key.includes('aerial')
+                          ? 'aerial'
+                          : key.includes('night')
+                            ? 'night'
+                            : key.includes('exterior')
+                              ? 'exterior'
+                              : `stop-${index}`;
       return {
         id: `${id}-${index}`,
         label: item.label,

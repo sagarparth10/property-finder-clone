@@ -33,8 +33,7 @@ export default {
         return env.ASSETS.fetch(request);
       }
       await ensureSeed(env);
-      await enrichDemoVillaMedia(env);
-      await enrichDemoPenthouseMedia(env);
+      await enrichDemoListingMedia(env);
       const body = request.method === 'GET' || request.method === 'HEAD' ? null : await readJson(request);
       const res = await route(request, env, url, path, body);
       return cors(request, env, res);
@@ -716,90 +715,103 @@ async function aiChat(env: Env, body: any) {
   return json({ response: data?.message?.content || 'I could not generate a response at the moment.' });
 }
 
-async function enrichDemoVillaMedia(env: Env) {
-  const VILLA_IMAGES = [
-    '/media/villa-pool-exterior.webp',
-    '/media/villa-living-room.webp',
-    '/media/villa-kitchen.webp',
-    '/media/villa-bedroom.webp',
-    '/media/villa-aerial.webp',
-    '/media/villa-night-exterior.webp',
+async function enrichDemoListingMedia(env: Env) {
+  const GALLERIES: {
+    key: string;
+    images: string[];
+    match: (title: string, location: string) => boolean;
+    patch?: Record<string, unknown>;
+  }[] = [
+    {
+      key: 'villa',
+      images: [
+        '/media/villa-pool-exterior.webp',
+        '/media/villa-living-room.webp',
+        '/media/villa-kitchen.webp',
+        '/media/villa-bedroom.webp',
+        '/media/villa-aerial.webp',
+        '/media/villa-night-exterior.webp',
+      ],
+      match: (title, location) =>
+        title === 'spacious 3br villa in jumeirah' ||
+        (location.includes('jumeirah') && !location.includes('palm') && title.includes('villa')),
+      patch: {
+        description:
+          'Contemporary two-story white villa with an infinity pool, warm teak soffits, floor-to-ceiling glass, and a built-in outdoor kitchen. Indoor-outdoor living across living, kitchen, and bedroom suites — ideal for families seeking a modern Jumeirah lifestyle.',
+        furnished: true,
+        amenities: ['Garden', 'Pool', 'Parking', 'Maid Room', 'Outdoor Kitchen', 'Storage'],
+      },
+    },
+    {
+      key: 'marina',
+      images: [
+        '/media/marina-exterior.webp',
+        '/media/marina-living-room.webp',
+        '/media/marina-kitchen.webp',
+        '/media/marina-bedroom.webp',
+        '/media/marina-bathroom.webp',
+        '/media/marina-balcony.webp',
+      ],
+      match: (title, location) =>
+        title.includes('luxurious 2br apartment') ||
+        (location.includes('marina') && (title.includes('2br') || title.includes('apartment'))),
+    },
+    {
+      key: 'downtown',
+      images: [
+        '/media/downtown-living-room.webp',
+        '/media/downtown-kitchen.webp',
+        '/media/downtown-bedroom.webp',
+        '/media/downtown-bathroom.webp',
+        '/media/downtown-workspace.webp',
+        '/media/downtown-exterior.webp',
+      ],
+      match: (title, location) =>
+        title.includes('modern 1br studio') ||
+        (location.includes('downtown') && (title.includes('studio') || title.includes('1br'))),
+    },
+    {
+      key: 'palm',
+      images: [
+        '/media/palm-terrace.webp',
+        '/media/palm-living-room.webp',
+        '/media/palm-kitchen.webp',
+        '/media/palm-bedroom.webp',
+        '/media/palm-pool.webp',
+        '/media/palm-dining.webp',
+      ],
+      match: (title, location) =>
+        title.includes('premium 4br penthouse') ||
+        ((location.includes('palm') || title.includes('palm')) && title.includes('penthouse')),
+    },
   ];
-  const description =
-    'Contemporary two-story white villa with an infinity pool, warm teak soffits, floor-to-ceiling glass, and a built-in outdoor kitchen. Indoor-outdoor living across living, kitchen, and bedroom suites — ideal for families seeking a modern Jumeirah lifestyle.';
 
-  const byTitle = asList(
-    await sb(
-      env,
-      'properties?select=id,title,location,images&title=eq.Spacious%203BR%20Villa%20in%20Jumeirah&active=eq.true',
-    ),
+  const rows = asList(
+    await sb(env, 'properties?select=id,title,location,images&active=eq.true&limit=100'),
   );
-  const byLocation = asList(
-    await sb(
-      env,
-      'properties?select=id,title,location,images&location=ilike.*Jumeirah*&type=eq.sale&bedrooms=eq.3&active=eq.true',
-    ),
-  );
-  const seen = new Set<string>();
-  const rows = [...byTitle, ...byLocation].filter((row) => {
-    const id = String(row.id || '');
-    if (!id || seen.has(id)) return false;
-    seen.add(id);
-    return true;
-  });
 
   for (const row of rows) {
     const title = String(row.title || '').toLowerCase();
     const location = String(row.location || '').toLowerCase();
-    const isTarget =
-      title === 'spacious 3br villa in jumeirah' ||
-      (location.includes('jumeirah') && !location.includes('palm') && title.includes('villa'));
-    if (!isTarget) continue;
+    const gallery = GALLERIES.find((g) => g.match(title, location));
+    if (!gallery) continue;
 
     const images = Array.isArray(row.images) ? row.images : [];
-    // Accept .png or .webp so a parallel media-compression pass is not overwritten.
-    const alreadyEnriched =
-      images.length >= 6 && /\/media\/villa-pool-exterior\.(webp|png)/.test(String(images[0] || ''));
-    if (alreadyEnriched) continue;
+    const hero = String(images[0] || '');
+    const expectedHero = gallery.images[0];
+    const sameHero =
+      hero === expectedHero ||
+      // already on webp set, or legacy png paths that still need upgrading to webp
+      (hero.replace(/\.png$/, '.webp') === expectedHero && !hero.endsWith('.png'));
+    const heroOk = images.length >= 6 && sameHero && images.every((src: unknown) => !String(src).endsWith('.png'));
+    if (heroOk) continue;
 
     await sb(env, `properties?id=eq.${row.id}`, {
       method: 'PATCH',
       body: JSON.stringify({
-        images: VILLA_IMAGES,
-        description,
-        furnished: true,
-        amenities: ['Garden', 'Pool', 'Parking', 'Maid Room', 'Outdoor Kitchen', 'Storage'],
+        images: gallery.images,
+        ...(gallery.patch || {}),
       }),
-    });
-  }
-}
-
-/** Palm penthouse previously reused Unsplash photo-1613490493576 (white villa + pool) — same look as villa demo media. */
-const PENTHOUSE_IMAGES = [
-  'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800',
-  'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800',
-  'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800',
-];
-
-async function enrichDemoPenthouseMedia(env: Env) {
-  const byTitle = asList(
-    await sb(
-      env,
-      'properties?select=id,title,location,images&title=eq.Premium%204BR%20Penthouse%20in%20Palm%20Jumeirah&active=eq.true',
-    ),
-  );
-  for (const row of byTitle) {
-    const images = Array.isArray(row.images) ? row.images : [];
-    const hero = String(images[0] || '');
-    const needsFix =
-      !hero ||
-      hero.includes('photo-1613490493576') ||
-      /\/media\/villa-/.test(hero);
-    if (!needsFix) continue;
-
-    await sb(env, `properties?id=eq.${row.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ images: PENTHOUSE_IMAGES }),
     });
   }
 }
@@ -837,7 +849,14 @@ async function ensureSeed(env: Env) {
       area: 1200,
       furnished: true,
       verified: true,
-      images: ['https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800'],
+      images: [
+        '/media/marina-exterior.webp',
+        '/media/marina-living-room.webp',
+        '/media/marina-kitchen.webp',
+        '/media/marina-bedroom.webp',
+        '/media/marina-bathroom.webp',
+        '/media/marina-balcony.webp',
+      ],
       amenities: ['Gym', 'Pool', 'Parking', 'Balcony', 'Security'],
       agent_id: john.id,
       developer: 'Emaar Properties',
@@ -856,7 +875,14 @@ async function ensureSeed(env: Env) {
       area: 650,
       furnished: true,
       verified: false,
-      images: ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800'],
+      images: [
+        '/media/downtown-living-room.webp',
+        '/media/downtown-kitchen.webp',
+        '/media/downtown-bedroom.webp',
+        '/media/downtown-bathroom.webp',
+        '/media/downtown-workspace.webp',
+        '/media/downtown-exterior.webp',
+      ],
       amenities: ['Gym', 'Rooftop', 'Security', 'Balcony'],
       agent_id: john.id,
       agent: { name: john.name, email: john.email },
@@ -902,9 +928,12 @@ async function ensureSeed(env: Env) {
       furnished: true,
       verified: true,
       images: [
-        'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800',
-        'https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800',
-        'https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=800',
+        '/media/palm-terrace.webp',
+        '/media/palm-living-room.webp',
+        '/media/palm-kitchen.webp',
+        '/media/palm-bedroom.webp',
+        '/media/palm-pool.webp',
+        '/media/palm-dining.webp',
       ],
       amenities: ['Gym', 'Pool', 'Beach', 'Concierge', 'Parking'],
       agent_id: sarah.id,

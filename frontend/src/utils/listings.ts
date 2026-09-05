@@ -1,24 +1,24 @@
-import { isVillaDemoListing, VILLA_DEMO_IMAGES } from '@/data/villaDemoMedia';
+import { demoHeroImage, withDemoListingMedia } from '@/data/demoListingMedia';
 
 export function toListingCard(property: any) {
   const id = String(property._id || property.id);
-  const villaDemo = isVillaDemoListing(property, id);
+  const enriched = withDemoListingMedia(property, undefined, id);
   return {
     id,
-    title: property.title,
-    price: property.price,
-    location: property.location,
-    bedrooms: property.bedrooms,
-    bathrooms: property.bathrooms,
-    area: property.area,
-    image: villaDemo
-      ? VILLA_DEMO_IMAGES[0]
-      : property.images?.[0] ||
-        property.image ||
-        'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800',
-    type: property.type,
-    furnished: !!property.furnished,
-    verified: !!property.verified,
+    title: enriched.title,
+    price: enriched.price,
+    location: enriched.location,
+    bedrooms: enriched.bedrooms,
+    bathrooms: enriched.bathrooms,
+    area: enriched.area,
+    image:
+      demoHeroImage(enriched, id) ||
+      enriched.images?.[0] ||
+      enriched.image ||
+      '/media/marina-exterior.webp',
+    type: enriched.type,
+    furnished: !!enriched.furnished,
+    verified: !!enriched.verified,
   };
 }
 

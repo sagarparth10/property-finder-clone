@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Bed, Bath, Square, MapPin, ShieldCheck, PencilLine, Users, Share2 } from 'lucide-react';
 import { mockProperties } from '@/data/mockData';
-import { isVillaDemoListing, withVillaDemoMedia } from '@/data/villaDemoMedia';
+import { resolveDemoGalleryKey, withDemoListingMedia } from '@/data/demoListingMedia';
 import { propertyAPI } from '@/utils/api';
 import { formatAed } from '@/utils/listings';
 import { AppUser, useAuth } from '@/context/AuthContext';
@@ -101,14 +101,14 @@ export default function PropertyDetailClient() {
       .getById(propertyId)
       .then((data) => {
         if (!cancelled) {
-          setProperty(isVillaDemoListing(data, propertyId) ? withVillaDemoMedia(data) : data);
+          setProperty(withDemoListingMedia(data, undefined, propertyId));
         }
       })
       .catch(() => {
         const fallback = mockAsProperty(propertyId);
         if (!cancelled) {
           if (fallback) {
-            setProperty(isVillaDemoListing(fallback, propertyId) ? withVillaDemoMedia(fallback) : fallback);
+            setProperty(withDemoListingMedia(fallback, undefined, propertyId));
           } else setError('Listing not found');
         }
       });
@@ -156,9 +156,9 @@ export default function PropertyDetailClient() {
   const images: string[] =
     property.images?.length > 0
       ? property.images
-      : [property.image || 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800'];
+      : [property.image || '/media/marina-exterior.webp'];
   const enableWalkthrough =
-    Boolean(property.walkthrough) || isVillaDemoListing(property, propertyId);
+    Boolean(property.walkthrough) || Boolean(resolveDemoGalleryKey(property, propertyId));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">

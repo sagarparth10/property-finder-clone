@@ -22,9 +22,9 @@ export default function PropertyGallery({ images, alt }: PropertyGalleryProps) {
       ? images
       : [
           {
-            src: '/media/villa-pool-exterior.webp',
-            thumbSrc: '/media/villa-pool-exterior-thumb.webp',
-            label: 'Exterior',
+            src: '/media/marina-exterior.webp',
+            thumbSrc: '/media/marina-exterior-thumb.webp',
+            label: 'Photo',
           },
         ];
   const current = safeImages[Math.min(active, safeImages.length - 1)];
