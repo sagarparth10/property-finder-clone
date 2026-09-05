@@ -26,12 +26,12 @@ export function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-2 text-xl font-semibold text-gray-900">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:px-6 sm:py-4 lg:px-8">
+        <Link href="/" className="flex min-w-0 items-center gap-2 text-lg font-semibold text-gray-900 sm:text-xl">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white sm:h-10 sm:w-10">
             <Building2 className="h-5 w-5" />
           </span>
-          Property Nexus
+          <span className="truncate">Property Nexus</span>
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">

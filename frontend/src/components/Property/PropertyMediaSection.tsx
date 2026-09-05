@@ -118,28 +118,31 @@ export default function PropertyMediaSection({
   }, [gallery]);
 
   return (
-    <div>
+    <div className="min-w-0 w-full max-w-full">
       {enableWalkthrough && (
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setTab('photos')}
-            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
-              tab === 'photos' ? 'bg-primary-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <ImageIcon className="h-4 w-4" /> Photos
-          </button>
-          <button
-            type="button"
-            onClick={() => setTab('walkthrough')}
-            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition ${
-              tab === 'walkthrough' ? 'bg-primary-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <View className="h-4 w-4" /> 3D walkthrough
-          </button>
-          <span className="text-xs text-gray-500">Switch tabs to tour rooms in 3D</span>
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <button
+              type="button"
+              onClick={() => setTab('photos')}
+              className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold transition sm:min-h-0 sm:justify-start sm:py-2 ${
+                tab === 'photos' ? 'bg-primary-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <ImageIcon className="h-4 w-4 shrink-0" /> Photos
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('walkthrough')}
+              className={`inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-semibold transition sm:min-h-0 sm:justify-start sm:py-2 ${
+                tab === 'walkthrough' ? 'bg-primary-600 text-white shadow-sm' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <View className="h-4 w-4 shrink-0" />
+              <span className="truncate">3D walkthrough</span>
+            </button>
+          </div>
+          <span className="hidden text-xs text-gray-500 sm:inline">Switch tabs to tour rooms in 3D</span>
         </div>
       )}
 

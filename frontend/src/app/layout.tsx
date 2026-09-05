@@ -21,11 +21,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} bg-gray-50 text-gray-900 antialiased`}> 
+      <body className={`${inter.variable} max-w-[100vw] overflow-x-clip bg-gray-50 text-gray-900 antialiased`}> 
         <Providers>
-          <div className="flex min-h-screen flex-col">
+          <div className="flex min-h-screen min-w-0 flex-col">
             <Navbar />
-            <main className="flex-1">{children}</main>
+            <main className="min-w-0 flex-1">{children}</main>
             <Footer />
           </div>
         </Providers>

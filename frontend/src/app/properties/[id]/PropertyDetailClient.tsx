@@ -161,16 +161,16 @@ export default function PropertyDetailClient() {
     Boolean(property.walkthrough) || Boolean(resolveDemoGalleryKey(property, propertyId));
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="grid gap-10 lg:grid-cols-5">
-        <div className="lg:col-span-3">
+    <div className="mx-auto w-full max-w-6xl px-3 py-8 sm:px-6 sm:py-12 lg:px-8">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-5 lg:gap-10">
+        <div className="min-w-0 lg:col-span-3">
           <PropertyMediaSection
             title={property.title}
             images={images}
             mediaMeta={property.mediaMeta}
             enableWalkthrough={enableWalkthrough}
           />
-          <div className="mt-6 flex items-center gap-3">
+          <div className="mt-5 flex flex-wrap items-center gap-2 sm:mt-6 sm:gap-3">
             {property.verified && (
               <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
                 <ShieldCheck className="h-3 w-3" /> Verified
@@ -178,22 +178,23 @@ export default function PropertyDetailClient() {
             )}
             <span className="rounded-full bg-primary-50 px-3 py-1 text-xs font-semibold uppercase text-primary-700">{property.type}</span>
           </div>
-          <h1 className="mt-4 text-3xl font-bold text-gray-900">{property.title}</h1>
-          <p className="mt-2 flex items-center text-sm text-gray-600">
-            <MapPin className="mr-1 h-4 w-4" /> {property.location}
+          <h1 className="mt-3 break-words text-2xl font-bold text-gray-900 sm:mt-4 sm:text-3xl">{property.title}</h1>
+          <p className="mt-2 flex items-start text-sm text-gray-600">
+            <MapPin className="mr-1 mt-0.5 h-4 w-4 shrink-0" />
+            <span className="min-w-0 break-words">{property.location}</span>
           </p>
-          <p className="mt-4 text-3xl font-bold text-primary-700">
+          <p className="mt-3 text-2xl font-bold text-primary-700 sm:mt-4 sm:text-3xl">
             {formatAed(property.price)}
             {property.type === 'rent' && <span className="text-base font-normal text-gray-500"> / year</span>}
           </p>
-          <div className="mt-6 flex gap-6 text-gray-700">
-            <span className="flex items-center gap-1"><Bed className="h-4 w-4" /> {property.bedrooms} bed</span>
-            <span className="flex items-center gap-1"><Bath className="h-4 w-4" /> {property.bathrooms} bath</span>
-            <span className="flex items-center gap-1"><Square className="h-4 w-4" /> {property.area} sqft</span>
+          <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-700 sm:mt-6 sm:gap-6 sm:text-base">
+            <span className="flex items-center gap-1"><Bed className="h-4 w-4 shrink-0" /> {property.bedrooms} bed</span>
+            <span className="flex items-center gap-1"><Bath className="h-4 w-4 shrink-0" /> {property.bathrooms} bath</span>
+            <span className="flex items-center gap-1"><Square className="h-4 w-4 shrink-0" /> {property.area} sqft</span>
           </div>
-          <p className="mt-6 text-sm leading-6 text-gray-700">{property.description}</p>
+          <p className="mt-5 text-sm leading-6 text-gray-700 sm:mt-6">{property.description}</p>
           {property.amenities?.length > 0 && (
-            <div className="mt-6 flex flex-wrap gap-2">
+            <div className="mt-5 flex flex-wrap gap-2 sm:mt-6">
               {property.amenities.map((item: string) => (
                 <span key={item} className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">{item}</span>
               ))}
@@ -201,9 +202,9 @@ export default function PropertyDetailClient() {
           )}
         </div>
 
-        <aside className="lg:col-span-2">
+        <aside className="min-w-0 w-full lg:col-span-2 lg:sticky lg:top-24 lg:self-start">
           {showDealerPanel ? (
-            <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
               <p className="text-xs font-semibold uppercase tracking-wide text-primary-700">
                 {ownsListing ? 'Your listing' : 'Dealer workspace'}
               </p>
@@ -218,31 +219,31 @@ export default function PropertyDetailClient() {
               <div className="mt-5 space-y-2">
                 <Link
                   href="/agent/listings"
-                  className="flex w-full items-center justify-center gap-2 rounded-full bg-primary-600 py-3 text-sm font-semibold text-white hover:bg-primary-700"
+                  className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full bg-primary-600 py-3 text-sm font-semibold text-white hover:bg-primary-700"
                 >
-                  <PencilLine className="h-4 w-4" />
+                  <PencilLine className="h-4 w-4 shrink-0" />
                   {ownsListing ? 'Edit in My listings' : 'My listings'}
                 </Link>
                 <Link
                   href="/agent/leads"
-                  className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                  className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border border-gray-200 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
                 >
-                  <Users className="h-4 w-4" />
+                  <Users className="h-4 w-4 shrink-0" />
                   View CRM leads
                 </Link>
                 <button
                   type="button"
                   onClick={onShare}
-                  className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+                  className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border border-gray-200 py-3 text-sm font-semibold text-gray-800 hover:bg-gray-50"
                 >
-                  <Share2 className="h-4 w-4" />
+                  <Share2 className="h-4 w-4 shrink-0" />
                   Share listing
                 </button>
                 {shareNote && <p className="text-center text-xs text-green-700">{shareNote}</p>}
               </div>
             </div>
           ) : (
-            <form onSubmit={onInquire} className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+            <form onSubmit={onInquire} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
               <h2 className="text-lg font-semibold text-gray-900">Inquire with the dealer</h2>
               <p className="mt-1 text-sm text-gray-600">A dealer will follow up with matching options.</p>
               {sent ? (
@@ -251,14 +252,14 @@ export default function PropertyDetailClient() {
                 </p>
               ) : (
                 <div className="mt-4 space-y-3">
-                  <input required placeholder="First name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
-                  <input placeholder="Last name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
-                  <input required type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
-                  <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
-                  <input type="number" placeholder="Budget (AED)" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" />
-                  <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full rounded-xl border px-3 py-2 text-sm" rows={3} />
+                  <input required placeholder="First name" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full min-w-0 rounded-xl border px-3 py-2.5 text-sm" />
+                  <input placeholder="Last name" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="w-full min-w-0 rounded-xl border px-3 py-2.5 text-sm" />
+                  <input required type="email" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full min-w-0 rounded-xl border px-3 py-2.5 text-sm" />
+                  <input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full min-w-0 rounded-xl border px-3 py-2.5 text-sm" />
+                  <input type="number" placeholder="Budget (AED)" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} className="w-full min-w-0 rounded-xl border px-3 py-2.5 text-sm" />
+                  <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full min-w-0 rounded-xl border px-3 py-2.5 text-sm" rows={3} />
                   {error && <p className="text-xs text-red-600">{error}</p>}
-                  <button type="submit" className="w-full rounded-full bg-primary-600 py-3 text-sm font-semibold text-white hover:bg-primary-700">
+                  <button type="submit" className="min-h-[44px] w-full rounded-full bg-primary-600 py-3 text-sm font-semibold text-white hover:bg-primary-700">
                     Send inquiry
                   </button>
                 </div>

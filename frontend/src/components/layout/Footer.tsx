@@ -79,7 +79,7 @@ export function Footer() {
 
         <div className="mt-10 flex flex-col gap-4 border-t border-gray-200 pt-6 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; {new Date().getFullYear()} Property Nexus. All rights reserved.</p>
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
             <Link className="transition hover:text-primary-600" href="/privacy">
               Privacy Policy
             </Link>
