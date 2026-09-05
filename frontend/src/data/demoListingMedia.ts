@@ -3,6 +3,7 @@
 export type DemoMediaItem = { src: string; thumbSrc?: string; label: string };
 
 export const VILLA_DEMO_API_ID = 'e76b5ab7-b3d0-43a2-ba28-11b4bb5dfd89';
+export const PENTHOUSE_DEMO_API_ID = '5f61ffff-d7e5-445b-80f6-c711f2875be9';
 
 export const VILLA_DEMO_MEDIA_META: DemoMediaItem[] = [
   {
@@ -57,16 +58,20 @@ export const DOWNTOWN_DEMO_MEDIA_META: DemoMediaItem[] = [
   { src: '/media/downtown-exterior.webp', thumbSrc: '/media/downtown-exterior-thumb.webp', label: 'Exterior' },
 ];
 
-export const PALM_DEMO_MEDIA_META: DemoMediaItem[] = [
-  { src: '/media/palm-terrace.webp', thumbSrc: '/media/palm-terrace-thumb.webp', label: 'Terrace' },
-  { src: '/media/palm-living-room.webp', thumbSrc: '/media/palm-living-room-thumb.webp', label: 'Living room' },
-  { src: '/media/palm-kitchen.webp', thumbSrc: '/media/palm-kitchen-thumb.webp', label: 'Kitchen' },
-  { src: '/media/palm-bedroom.webp', thumbSrc: '/media/palm-bedroom-thumb.webp', label: 'Bedroom' },
-  { src: '/media/palm-pool.webp', thumbSrc: '/media/palm-pool-thumb.webp', label: 'Pool' },
-  { src: '/media/palm-dining.webp', thumbSrc: '/media/palm-dining-thumb.webp', label: 'Dining' },
+/** High-rise penthouse gallery — never reuse villa+pool Unsplash assets. */
+export const PENTHOUSE_DEMO_MEDIA_META: DemoMediaItem[] = [
+  { src: '/media/penthouse-skyline.webp', thumbSrc: '/media/penthouse-skyline-thumb.webp', label: 'Skyline' },
+  { src: '/media/penthouse-living-room.webp', thumbSrc: '/media/penthouse-living-room-thumb.webp', label: 'Living room' },
+  { src: '/media/penthouse-kitchen.webp', thumbSrc: '/media/penthouse-kitchen-thumb.webp', label: 'Kitchen' },
+  { src: '/media/penthouse-bedroom.webp', thumbSrc: '/media/penthouse-bedroom-thumb.webp', label: 'Bedroom' },
+  { src: '/media/penthouse-terrace.webp', thumbSrc: '/media/penthouse-terrace-thumb.webp', label: 'Terrace' },
+  { src: '/media/penthouse-dining.webp', thumbSrc: '/media/penthouse-dining-thumb.webp', label: 'Dining' },
 ];
 
-export type DemoGalleryKey = 'villa' | 'marina' | 'downtown' | 'palm';
+/** @deprecated Use PENTHOUSE_DEMO_MEDIA_META */
+export const PALM_DEMO_MEDIA_META = PENTHOUSE_DEMO_MEDIA_META;
+
+export type DemoGalleryKey = 'villa' | 'marina' | 'downtown' | 'penthouse';
 
 const GALLERIES: Record<
   DemoGalleryKey,
@@ -90,16 +95,25 @@ const GALLERIES: Record<
     walkthrough: true,
     mockIds: ['3'],
   },
-  palm: {
-    images: PALM_DEMO_MEDIA_META.map((m) => m.src),
-    mediaMeta: PALM_DEMO_MEDIA_META,
+  penthouse: {
+    images: PENTHOUSE_DEMO_MEDIA_META.map((m) => m.src),
+    mediaMeta: PENTHOUSE_DEMO_MEDIA_META,
     walkthrough: true,
-    mockIds: ['4'],
+    mockIds: ['4', PENTHOUSE_DEMO_API_ID],
   },
 };
 
 function norm(value: unknown): string {
   return String(value || '').toLowerCase();
+}
+
+function isPalmOrPenthouseText(title: string, location: string): boolean {
+  return (
+    title.includes('palm') ||
+    title.includes('penthouse') ||
+    location.includes('palm') ||
+    location.includes('penthouse')
+  );
 }
 
 /** Match a demo listing to its curated gallery (strict — never reuse villa for palm/marina). */
@@ -113,9 +127,26 @@ export function resolveDemoGalleryKey(property: any, propertyId?: string | null)
   const location = norm(property?.location);
   const images: string[] = Array.isArray(property?.images) ? property.images.map(String) : [];
 
-  if (images.some((src) => src.includes('/media/villa-')) || (location.includes('jumeirah') && title.includes('villa'))) {
+  // Penthouse before villa: Palm Jumeirah contains "Jumeirah"; never let villa win.
+  if (
+    images.some((src) => src.includes('/media/penthouse-') || src.includes('/media/palm-')) ||
+    title.includes('premium 4br penthouse') ||
+    ((location.includes('palm') || title.includes('palm')) &&
+      (title.includes('penthouse') || title.includes('4br') || title.includes('4 br')))
+  ) {
+    return 'penthouse';
+  }
+
+  // Villa: UUID (mockIds above), exact demo title, or existing villa media paths.
+  // Never match on bare "Jumeirah" — Palm Jumeirah contains that substring.
+  if (
+    !isPalmOrPenthouseText(title, location) &&
+    (title === 'spacious 3br villa in jumeirah' ||
+      images.some((src) => src.includes('/media/villa-')))
+  ) {
     return 'villa';
   }
+
   if (
     images.some((src) => src.includes('/media/marina-')) ||
     (location.includes('marina') && (title.includes('2br') || title.includes('2 br') || title.includes('apartment')))
@@ -127,12 +158,6 @@ export function resolveDemoGalleryKey(property: any, propertyId?: string | null)
     (location.includes('downtown') && (title.includes('studio') || title.includes('1br') || title.includes('1 br')))
   ) {
     return 'downtown';
-  }
-  if (
-    images.some((src) => src.includes('/media/palm-')) ||
-    ((location.includes('palm') || title.includes('palm')) && (title.includes('penthouse') || title.includes('4br') || title.includes('4 br')))
-  ) {
-    return 'palm';
   }
 
   return null;
@@ -173,5 +198,5 @@ export const DEMO_LISTING_IMAGE_PATHS: Record<DemoGalleryKey, string[]> = {
   villa: [...VILLA_DEMO_IMAGES],
   marina: MARINA_DEMO_MEDIA_META.map((m) => m.src),
   downtown: DOWNTOWN_DEMO_MEDIA_META.map((m) => m.src),
-  palm: PALM_DEMO_MEDIA_META.map((m) => m.src),
+  penthouse: PENTHOUSE_DEMO_MEDIA_META.map((m) => m.src),
 };

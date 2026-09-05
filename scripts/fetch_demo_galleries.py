@@ -10,6 +10,8 @@ from PIL import Image
 OUT = os.path.join(os.path.dirname(__file__), "..", "frontend", "public", "media")
 os.makedirs(OUT, exist_ok=True)
 
+# Penthouse hero MUST be a high-rise / apartment look — never villa+pool
+# (photo-1613490493576 is the iconic white villa Unsplash; do not use it here).
 ASSETS = [
     # marina
     ("marina", "exterior", "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1600&q=80&fm=jpg"),
@@ -18,21 +20,24 @@ ASSETS = [
     ("marina", "bedroom", "https://images.unsplash.com/photo-1616594039964-ae9021a400a0?w=1600&q=80&fm=jpg"),
     ("marina", "bathroom", "https://images.unsplash.com/photo-1552321554-5fefe8c9ef14?w=1600&q=80&fm=jpg"),
     ("marina", "balcony", "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=1600&q=80&fm=jpg"),
-    # downtown studio — living first (matches current interior hero)
+    # downtown studio
     ("downtown", "living-room", "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1600&q=80&fm=jpg"),
     ("downtown", "kitchen", "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1600&q=80&fm=jpg"),
     ("downtown", "bedroom", "https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=1600&q=80&fm=jpg"),
     ("downtown", "bathroom", "https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=1600&q=80&fm=jpg"),
     ("downtown", "workspace", "https://images.unsplash.com/photo-1497366216548-37526070297c?w=1600&q=80&fm=jpg"),
     ("downtown", "exterior", "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1600&q=80&fm=jpg"),
-    # palm penthouse
-    ("palm", "terrace", "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1600&q=80&fm=jpg"),
-    ("palm", "living-room", "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=1600&q=80&fm=jpg"),
-    ("palm", "kitchen", "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1600&q=80&fm=jpg"),
-    ("palm", "bedroom", "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1600&q=80&fm=jpg"),
-    ("palm", "pool", "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1600&q=80&fm=jpg"),
-    ("palm", "dining", "https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1600&q=80&fm=jpg"),
+    # palm penthouse — high-rise / apartment (prefix penthouse- for card clarity)
+    ("penthouse", "skyline", "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1600&q=80&fm=jpg"),
+    ("penthouse", "living-room", "https://images.unsplash.com/photo-1600607687644-c7171b42498f?w=1600&q=80&fm=jpg"),
+    ("penthouse", "kitchen", "https://images.unsplash.com/photo-1556912173-46c336c7fd55?w=1600&q=80&fm=jpg"),
+    ("penthouse", "bedroom", "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=1600&q=80&fm=jpg"),
+    ("penthouse", "terrace", "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=1600&q=80&fm=jpg"),
+    ("penthouse", "dining", "https://images.unsplash.com/photo-1617806118233-18e1de247200?w=1600&q=80&fm=jpg"),
 ]
+
+# Force re-fetch these prefixes (used when replacing lookalike assets).
+FORCE_PREFIXES = {"penthouse"}
 
 UA = {"User-Agent": "PropertyNexusDemo/1.0"}
 
@@ -50,7 +55,13 @@ def main() -> None:
     for prefix, slug, url in ASSETS:
         full = os.path.join(OUT, f"{prefix}-{slug}.webp")
         thumb = os.path.join(OUT, f"{prefix}-{slug}-thumb.webp")
-        if os.path.exists(full) and os.path.exists(thumb) and os.path.getsize(full) > 1000:
+        force = prefix in FORCE_PREFIXES
+        if (
+            not force
+            and os.path.exists(full)
+            and os.path.exists(thumb)
+            and os.path.getsize(full) > 1000
+        ):
             print("skip", os.path.basename(full))
             continue
         print("fetch", prefix, slug)

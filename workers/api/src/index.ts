@@ -715,13 +715,32 @@ async function aiChat(env: Env, body: any) {
   return json({ response: data?.message?.content || 'I could not generate a response at the moment.' });
 }
 
+const VILLA_DEMO_API_ID = 'e76b5ab7-b3d0-43a2-ba28-11b4bb5dfd89';
+const PENTHOUSE_DEMO_API_ID = '5f61ffff-d7e5-445b-80f6-c711f2875be9';
+
 async function enrichDemoListingMedia(env: Env) {
   const GALLERIES: {
     key: string;
     images: string[];
-    match: (title: string, location: string) => boolean;
+    match: (id: string, title: string, location: string) => boolean;
     patch?: Record<string, unknown>;
   }[] = [
+    {
+      key: 'penthouse',
+      images: [
+        '/media/penthouse-skyline.webp',
+        '/media/penthouse-living-room.webp',
+        '/media/penthouse-kitchen.webp',
+        '/media/penthouse-bedroom.webp',
+        '/media/penthouse-terrace.webp',
+        '/media/penthouse-dining.webp',
+      ],
+      // Match UUID / exact title first — Palm Jumeirah must never get villa media.
+      match: (id, title, location) =>
+        id === PENTHOUSE_DEMO_API_ID ||
+        title.includes('premium 4br penthouse') ||
+        ((location.includes('palm') || title.includes('palm')) && title.includes('penthouse')),
+    },
     {
       key: 'villa',
       images: [
@@ -732,9 +751,15 @@ async function enrichDemoListingMedia(env: Env) {
         '/media/villa-aerial.webp',
         '/media/villa-night-exterior.webp',
       ],
-      match: (title, location) =>
+      // Exact UUID or exact demo title only — never bare "Jumeirah" (matches Palm Jumeirah).
+      match: (id, title, location) =>
+        id === VILLA_DEMO_API_ID ||
         title === 'spacious 3br villa in jumeirah' ||
-        (location.includes('jumeirah') && !location.includes('palm') && title.includes('villa')),
+        (title.includes('villa') &&
+          location.includes('jumeirah') &&
+          !location.includes('palm') &&
+          !title.includes('penthouse') &&
+          !title.includes('palm')),
       patch: {
         description:
           'Contemporary two-story white villa with an infinity pool, warm teak soffits, floor-to-ceiling glass, and a built-in outdoor kitchen. Indoor-outdoor living across living, kitchen, and bedroom suites — ideal for families seeking a modern Jumeirah lifestyle.',
@@ -752,7 +777,7 @@ async function enrichDemoListingMedia(env: Env) {
         '/media/marina-bathroom.webp',
         '/media/marina-balcony.webp',
       ],
-      match: (title, location) =>
+      match: (_id, title, location) =>
         title.includes('luxurious 2br apartment') ||
         (location.includes('marina') && (title.includes('2br') || title.includes('apartment'))),
     },
@@ -766,23 +791,9 @@ async function enrichDemoListingMedia(env: Env) {
         '/media/downtown-workspace.webp',
         '/media/downtown-exterior.webp',
       ],
-      match: (title, location) =>
+      match: (_id, title, location) =>
         title.includes('modern 1br studio') ||
         (location.includes('downtown') && (title.includes('studio') || title.includes('1br'))),
-    },
-    {
-      key: 'palm',
-      images: [
-        '/media/palm-terrace.webp',
-        '/media/palm-living-room.webp',
-        '/media/palm-kitchen.webp',
-        '/media/palm-bedroom.webp',
-        '/media/palm-pool.webp',
-        '/media/palm-dining.webp',
-      ],
-      match: (title, location) =>
-        title.includes('premium 4br penthouse') ||
-        ((location.includes('palm') || title.includes('palm')) && title.includes('penthouse')),
     },
   ];
 
@@ -791,9 +802,10 @@ async function enrichDemoListingMedia(env: Env) {
   );
 
   for (const row of rows) {
+    const id = String(row.id || '');
     const title = String(row.title || '').toLowerCase();
     const location = String(row.location || '').toLowerCase();
-    const gallery = GALLERIES.find((g) => g.match(title, location));
+    const gallery = GALLERIES.find((g) => g.match(id, title, location));
     if (!gallery) continue;
 
     const images = Array.isArray(row.images) ? row.images : [];
@@ -928,12 +940,12 @@ async function ensureSeed(env: Env) {
       furnished: true,
       verified: true,
       images: [
-        '/media/palm-terrace.webp',
-        '/media/palm-living-room.webp',
-        '/media/palm-kitchen.webp',
-        '/media/palm-bedroom.webp',
-        '/media/palm-pool.webp',
-        '/media/palm-dining.webp',
+        '/media/penthouse-skyline.webp',
+        '/media/penthouse-living-room.webp',
+        '/media/penthouse-kitchen.webp',
+        '/media/penthouse-bedroom.webp',
+        '/media/penthouse-terrace.webp',
+        '/media/penthouse-dining.webp',
       ],
       amenities: ['Gym', 'Pool', 'Beach', 'Concierge', 'Parking'],
       agent_id: sarah.id,
