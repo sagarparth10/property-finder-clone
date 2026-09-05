@@ -90,8 +90,8 @@ export function AIAvatar({ onUserInput, avatarResponse, isListening }: AIAvatarP
   };
 
   return (
-    <div className="relative flex min-h-[22rem] flex-col overflow-hidden rounded-2xl bg-gradient-to-b from-primary-50 via-white to-primary-50/80 sm:min-h-[24rem]">
-      {/* Language switcher */}
+    <div className="relative flex min-h-[22rem] flex-col overflow-y-auto rounded-2xl bg-gradient-to-b from-primary-50 via-white to-primary-50/80 text-primary-900 sm:min-h-[24rem]">
+      {/* Language switcher — speech/TTS locale only; UI copy stays English */}
       <div className="absolute right-3 top-3 z-10 flex gap-1.5 sm:right-4 sm:top-4">
         {LANGUAGES.map((item) => {
           const active = lang === item.code;
@@ -113,8 +113,8 @@ export function AIAvatar({ onUserInput, avatarResponse, isListening }: AIAvatarP
         })}
       </div>
 
-      {/* Empty-state invite */}
-      <div className="flex flex-1 flex-col justify-center px-5 pb-4 pt-14 sm:px-7 sm:pb-5 sm:pt-16">
+      {/* Empty-state invite — keep at top so hero `text-white` inheritance cannot hide the title */}
+      <div className="flex flex-1 flex-col justify-start px-5 pb-4 pt-14 sm:px-7 sm:pb-5 sm:pt-16">
         <div className="mx-auto max-w-sm text-center">
           <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-md shadow-primary-600/25">
             <Sparkles className="h-5 w-5" aria-hidden />
@@ -122,7 +122,7 @@ export function AIAvatar({ onUserInput, avatarResponse, isListening }: AIAvatarP
           <h3 className="mt-4 font-display text-xl font-semibold tracking-tight text-primary-950 sm:text-2xl">
             Where should we start?
           </h3>
-          <p className="mt-2 text-sm leading-relaxed text-primary-900/65">
+          <p className="mt-2 text-sm leading-relaxed text-primary-800">
             Ask about listings, neighborhoods, financing, or legal steps — or pick a prompt below.
           </p>
         </div>
@@ -154,7 +154,7 @@ export function AIAvatar({ onUserInput, avatarResponse, isListening }: AIAvatarP
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             placeholder="Ask about your next move…"
-            className="min-w-0 flex-1 bg-transparent text-sm text-primary-950 outline-none placeholder:text-primary-900/40"
+            className="min-w-0 flex-1 bg-transparent text-sm text-primary-900 outline-none placeholder:text-primary-900/40"
             aria-label="Ask the AI concierge"
           />
           <button

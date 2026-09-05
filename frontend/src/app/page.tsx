@@ -145,11 +145,14 @@ export default function Home() {
                   <p className="text-white/75">Ask anything about your next property journey.</p>
                 </div>
               </div>
-              <AIAvatar
-                onUserInput={(text) => console.log('Hero Avatar Input', text)}
-                avatarResponse={null}
-                isListening={false}
-              />
+              {/* Isolate from hero `text-white` so Concierge copy stays readable */}
+              <div className="text-primary-900">
+                <AIAvatar
+                  onUserInput={(text) => console.log('Hero Avatar Input', text)}
+                  avatarResponse={null}
+                  isListening={false}
+                />
+              </div>
             </div>
           </div>
         </div>
