@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { AIChatPanel } from '@/components/Chatbot/AIChatPanel';
-import { PlugZap, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'AI Concierge | Property Nexus',
@@ -15,7 +15,7 @@ export default function AIAssistantPage() {
           <AIChatPanel />
         </section>
 
-        <aside className="space-y-6">
+        <aside>
           <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
             <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50">
               <ShieldCheck className="h-5 w-5 text-primary-600" />
@@ -27,16 +27,6 @@ export default function AIAssistantPage() {
               <li>• Legal and financing workflows in the UAE</li>
               <li>• How to use the agent, developer, or lawyer portals</li>
             </ul>
-          </div>
-
-          <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50">
-              <PlugZap className="h-5 w-5 text-primary-600" />
-            </div>
-            <h3 className="mt-4 text-lg font-semibold text-gray-900">Next steps</h3>
-            <p className="mt-2 text-sm text-gray-600">
-              Replace the placeholder backend prompt and connect the chat history to property search, analytics, and CRM workflows to deliver contextual answers.
-            </p>
           </div>
         </aside>
       </div>
