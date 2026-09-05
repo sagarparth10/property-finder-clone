@@ -24,6 +24,9 @@
   },
   "vars": {
     "FRONTEND_URL": "https://property.cognaitive.in",
-    "OLLAMA_MODEL": "llama3:latest"
+    "OLLAMA_MODEL": "llama3.2:3b",
+    "OLLAMA_KEEP_ALIVE": "10m",
+    "OLLAMA_NUM_PREDICT": "384",
+    "OLLAMA_TEMPERATURE": "0.6"
   }
 }

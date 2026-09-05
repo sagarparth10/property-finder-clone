@@ -133,9 +133,103 @@ export const aiAPI = {
       message,
       language: options?.language,
       history: options?.history,
+      stream: false,
     });
     return response.data;
   },
+
+  /**
+   * Stream tokens via SSE (Worker/Nest → Ollama). Falls back to JSON if the
+   * server returns application/json. Call onToken for each chunk to improve TTFT UX.
+   */
+  chatStream: async (
+    message: string,
+    options?: {
+      language?: string;
+      history?: { role: 'assistant' | 'user'; content: string }[];
+      signal?: AbortSignal;
+      onToken?: (token: string) => void;
+    },
+  ): Promise<string> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+    };
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('auth_token');
+      if (token) headers.Authorization = `Bearer ${token}`;
+    }
+
+    const res = await fetch(`${API_BASE_URL}/ai/chat`, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      signal: options?.signal,
+      body: JSON.stringify({
+        message,
+        language: options?.language,
+        history: options?.history,
+        stream: true,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`AI chat failed (${res.status})`);
+    }
+
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const data = (await res.json()) as { response?: string };
+      const text = data.response || '';
+      if (text) options?.onToken?.(text);
+      return text;
+    }
+
+    if (!res.body) {
+      throw new Error('AI chat stream missing body');
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let full = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop() || '';
+
+      for (const part of parts) {
+        const line = part
+          .split('\n')
+          .map((l) => l.trim())
+          .find((l) => l.startsWith('data:'));
+        if (!line) continue;
+        const payload = line.slice(5).trim();
+        if (!payload || payload === '[DONE]') continue;
+        try {
+          const json = JSON.parse(payload) as {
+            content?: string;
+            done?: boolean;
+            error?: string;
+          };
+          if (json.error) throw new Error(json.error);
+          if (typeof json.content === 'string' && json.content.length > 0) {
+            full += json.content;
+            options?.onToken?.(json.content);
+          }
+        } catch (err) {
+          if (err instanceof SyntaxError) continue;
+          throw err;
+        }
+      }
+    }
+
+    return full;
+  },
+
   getRecommendations: async (userId: string) => {
     const response = await apiClient.get(`/ai/recommendations/${userId}`);
     return response.data;

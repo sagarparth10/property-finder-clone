@@ -32,8 +32,12 @@ export default {
       if (!path.startsWith('/api')) {
         return env.ASSETS.fetch(request);
       }
-      await ensureSeed(env);
-      await enrichDemoListingMedia(env);
+      // AI chat is latency-sensitive — skip seed/media enrichment round-trips to Supabase.
+      const isAiChat = path === '/api/v1/ai/chat';
+      if (!isAiChat) {
+        await ensureSeed(env);
+        await enrichDemoListingMedia(env);
+      }
       const body = request.method === 'GET' || request.method === 'HEAD' ? null : await readJson(request);
       const res = await route(request, env, url, path, body);
       return cors(request, env, res);
@@ -690,29 +694,116 @@ function scoreListingToLead(listing: any, lead: any) {
 
 async function aiChat(env: Env, body: any) {
   const base = (env.OLLAMA_BASE_URL || 'https://ollama.cognaitive.in').replace(/\/$/, '');
-  const model = env.OLLAMA_MODEL || 'llama3:latest';
+  const model = env.OLLAMA_MODEL || 'llama3.2:3b';
+  const keepAlive = env.OLLAMA_KEEP_ALIVE || '10m';
+  const numPredict = Number(env.OLLAMA_NUM_PREDICT || 384);
+  const temperature = Number(env.OLLAMA_TEMPERATURE || 0.6);
+  const wantStream = body?.stream !== false;
   const history = Array.isArray(body.history) ? body.history : [];
+  const lang = String(body.language || 'en').toUpperCase();
+
+  const messages = [
+    {
+      role: 'system',
+      content: `You are Property Nexus, a concise UAE real-estate concierge. Prefer short, actionable answers. Reply in ${lang} when appropriate.`,
+    },
+    ...history
+      .filter((entry: any) => entry.role === 'assistant' || entry.role === 'user')
+      .slice(-8)
+      .map((entry: any) => ({ role: entry.role, content: entry.content })),
+    { role: 'user', content: String(body.message || '') },
+  ];
+
+  const ollamaPayload = {
+    model,
+    stream: wantStream,
+    keep_alive: keepAlive,
+    options: {
+      temperature: Number.isFinite(temperature) ? temperature : 0.6,
+      num_predict: Number.isFinite(numPredict) && numPredict > 0 ? numPredict : 384,
+    },
+    messages,
+  };
+
   const res = await fetch(`${base}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      stream: false,
-      messages: [
-        {
-          role: 'system',
-          content: `You are Property Nexus, an AI concierge helping users navigate UAE real estate. Respond in ${(body.language || 'en').toUpperCase()} when appropriate.`,
-        },
-        ...history
-          .filter((entry: any) => entry.role === 'assistant' || entry.role === 'user')
-          .map((entry: any) => ({ role: entry.role, content: entry.content })),
-        { role: 'user', content: String(body.message || '') },
-      ],
-    }),
+    body: JSON.stringify(ollamaPayload),
   });
-  if (!res.ok) return json({ response: 'I am having trouble reaching the AI engine right now.' });
-  const data: any = await res.json();
-  return json({ response: data?.message?.content || 'I could not generate a response at the moment.' });
+
+  if (!res.ok) {
+    return json({ response: 'I am having trouble reaching the AI engine right now.' });
+  }
+
+  if (!wantStream) {
+    const data: any = await res.json();
+    return json({
+      response: data?.message?.content || 'I could not generate a response at the moment.',
+    });
+  }
+
+  if (!res.body) {
+    return json({ response: 'I could not generate a response at the moment.' });
+  }
+
+  // Proxy Ollama NDJSON → SSE so the browser can render tokens as they arrive (faster TTFT).
+  const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+  const writer = writable.getWriter();
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  (async () => {
+    const reader = res.body!.getReader();
+    let buffer = '';
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const chunk = JSON.parse(trimmed) as {
+              message?: { content?: string };
+              done?: boolean;
+            };
+            const content = chunk?.message?.content;
+            if (typeof content === 'string' && content.length > 0) {
+              await writer.write(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
+            }
+            if (chunk.done) {
+              await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+            }
+          } catch {
+            // skip malformed NDJSON lines
+          }
+        }
+      }
+    } catch {
+      await writer.write(
+        encoder.encode(`data: ${JSON.stringify({ error: 'stream_failed' })}\n\n`),
+      );
+    } finally {
+      try {
+        await writer.close();
+      } catch {
+        /* already closed */
+      }
+    }
+  })();
+
+  return new Response(readable, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    },
+  });
 }
 
 const VILLA_DEMO_API_ID = 'e76b5ab7-b3d0-43a2-ba28-11b4bb5dfd89';

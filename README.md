@@ -108,7 +108,7 @@ Property_Finder_Clone/
 ### Prerequisites
 
 - Node.js 18+
-- Ollama (optional local LLM) with the model in `OLLAMA_MODEL` (default `llama3`)
+- Ollama (optional local LLM) with the model in `OLLAMA_MODEL` (default `llama3.2:3b` — see `docs/OLLAMA_PERFORMANCE.md`)
 - Mapbox/Google Maps API Key (optional)
 - Supabase project for the Worker API (see `supabase/schema.sql`)
 
