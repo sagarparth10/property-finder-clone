@@ -7,6 +7,10 @@ export const CONCIERGE_LANGS = [
 
 export type ConciergeLang = (typeof CONCIERGE_LANGS)[number]['code'];
 
+export function isConciergeLang(value: string | null | undefined): value is ConciergeLang {
+  return value === 'en' || value === 'ar' || value === 'fr' || value === 'hi';
+}
+
 export type ConciergeCopy = {
   title: string;
   tagline: string;
@@ -25,7 +29,30 @@ export type ConciergeCopy = {
   thinking: string;
   chatPlaceholder: string;
   errorContact: string;
+  whatYouCanAskTitle: string;
+  whatYouCanAsk: [string, string, string, string];
 };
+
+export const CONCIERGE_LANG_STORAGE_KEY = 'property-nexus-concierge-lang';
+
+export function readStoredConciergeLang(): ConciergeLang | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = sessionStorage.getItem(CONCIERGE_LANG_STORAGE_KEY);
+    return isConciergeLang(stored) ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
+export function storeConciergeLang(lang: ConciergeLang): void {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(CONCIERGE_LANG_STORAGE_KEY, lang);
+  } catch {
+    // Ignore quota / private-mode failures.
+  }
+}
 
 export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
   en: {
@@ -53,6 +80,13 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
     thinking: 'Thinking...',
     chatPlaceholder: 'Ask about listings, financing, or legal workflows...',
     errorContact: 'Unable to contact the AI engine. Please try again in a moment.',
+    whatYouCanAskTitle: 'What you can ask',
+    whatYouCanAsk: [
+      'Property shortlists (budget, location, amenities)',
+      'Investment metrics and neighborhood comparisons',
+      'Legal and financing workflows in the UAE',
+      'How to use the agent, developer, or lawyer portals',
+    ],
   },
   ar: {
     title: 'المساعد الذكي',
@@ -78,6 +112,13 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
     thinking: 'جارٍ التفكير...',
     chatPlaceholder: 'اسأل عن العقارات أو التمويل أو الإجراءات القانونية...',
     errorContact: 'تعذر الاتصال بمحرك الذكاء الاصطناعي. حاول مرة أخرى بعد لحظات.',
+    whatYouCanAskTitle: 'ماذا يمكنك أن تسأل',
+    whatYouCanAsk: [
+      'قوائم مختصرة للعقارات (الميزانية، الموقع، المرافق)',
+      'مقاييس الاستثمار ومقارنات الأحياء',
+      'الخطوات القانونية والتمويلية في الإمارات',
+      'كيفية استخدام بوابات الوكلاء أو المطورين أو المحامين',
+    ],
   },
   fr: {
     title: 'Concierge IA',
@@ -104,6 +145,13 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
     thinking: 'Réflexion...',
     chatPlaceholder: 'Parlez d’annonces, de financement ou de démarches juridiques...',
     errorContact: 'Impossible de contacter le moteur IA. Réessayez dans un instant.',
+    whatYouCanAskTitle: 'Ce que vous pouvez demander',
+    whatYouCanAsk: [
+      'Sélections de biens (budget, emplacement, équipements)',
+      'Indicateurs d’investissement et comparaisons de quartiers',
+      'Démarches juridiques et de financement aux Émirats',
+      'Utilisation des portails agents, promoteurs ou avocats',
+    ],
   },
   hi: {
     title: 'एआई कंसीयर्ज',
@@ -130,12 +178,15 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
     thinking: 'सोच रहा हूँ...',
     chatPlaceholder: 'लिस्टिंग, फाइनेंसिंग या कानूनी प्रक्रिया पूछें...',
     errorContact: 'एआई से संपर्क नहीं हो पाया। थोड़ी देर बाद फिर कोशिश करें।',
+    whatYouCanAskTitle: 'आप क्या पूछ सकते हैं',
+    whatYouCanAsk: [
+      'प्रॉपर्टी शॉर्टलिस्ट (बजट, लोकेशन, सुविधाएँ)',
+      'निवेश मेट्रिक्स और इलाकों की तुलना',
+      'यूएई में कानूनी और फाइनेंसिंग प्रक्रियाएँ',
+      'एजेंट, डेवलपर या वकील पोर्टल कैसे इस्तेमाल करें',
+    ],
   },
 };
-
-export function isConciergeLang(value: string | null | undefined): value is ConciergeLang {
-  return value === 'en' || value === 'ar' || value === 'fr' || value === 'hi';
-}
 
 export function getConciergeCopy(lang: ConciergeLang): ConciergeCopy {
   return CONCIERGE_COPY[lang];

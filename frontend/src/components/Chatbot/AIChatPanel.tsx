@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { aiAPI } from '@/utils/api';
 import { Send, Loader2, Sparkles } from 'lucide-react';
 import { ChatMarkdown } from './ChatMarkdown';
 import {
+  CONCIERGE_LANGS,
+  ConciergeCopy,
   ConciergeLang,
-  getConciergeCopy,
-  isConciergeLang,
 } from '@/components/Avatar/conciergeI18n';
 
 export type ChatRole = 'assistant' | 'user';
@@ -25,13 +24,14 @@ const createId = () =>
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
 
-export function AIChatPanel() {
-  const searchParams = useSearchParams();
-  const langParam = searchParams.get('lang');
-  const lang: ConciergeLang = isConciergeLang(langParam) ? langParam : 'en';
-  const copy = getConciergeCopy(lang);
-  const isRtl = lang === 'ar';
+type AIChatPanelProps = {
+  lang: ConciergeLang;
+  copy: ConciergeCopy;
+  isRtl: boolean;
+  onLangChange: (lang: ConciergeLang) => void;
+};
 
+export function AIChatPanel({ lang, copy, isRtl, onLangChange }: AIChatPanelProps) {
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -149,13 +149,36 @@ export function AIChatPanel() {
       className="flex h-full flex-col rounded-3xl border border-gray-200 bg-white shadow-sm"
     >
       <div className="border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50">
-            <Sparkles className="h-5 w-5 text-primary-600" />
-          </span>
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">{copy.title}</h2>
-            <p className="text-xs text-gray-500">{copy.panelSubtitle}</p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50">
+              <Sparkles className="h-5 w-5 text-primary-600" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">{copy.title}</h2>
+              <p className="text-xs text-gray-500">{copy.panelSubtitle}</p>
+            </div>
+          </div>
+
+          <div className="flex gap-1.5" role="group" aria-label="Language">
+            {CONCIERGE_LANGS.map((item) => {
+              const active = lang === item.code;
+              return (
+                <button
+                  key={item.code}
+                  type="button"
+                  onClick={() => onLangChange(item.code)}
+                  aria-pressed={active}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide transition ${
+                    active
+                      ? 'bg-primary-700 text-white shadow-sm'
+                      : 'bg-primary-50 text-primary-800/70 ring-1 ring-primary-200/80 hover:bg-primary-100 hover:text-primary-900'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -167,20 +190,20 @@ export function AIChatPanel() {
             return null;
           }
           return (
-          <div
-            key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
             <div
-              className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm transition ${
-                message.role === 'user'
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-gray-100 text-gray-900'
-              }`}
+              key={message.id}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <ChatMarkdown content={message.content} variant={message.role} />
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm transition ${
+                  message.role === 'user'
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 text-gray-900'
+                }`}
+              >
+                <ChatMarkdown content={message.content} variant={message.role} />
+              </div>
             </div>
-          </div>
           );
         })}
         {isLoading && (
