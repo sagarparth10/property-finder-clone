@@ -31,6 +31,10 @@ export type ConciergeCopy = {
   errorContact: string;
   whatYouCanAskTitle: string;
   whatYouCanAsk: [string, string, string, string];
+  historyTitle: string;
+  newChat: string;
+  loginToSave: string;
+  historyEmpty: string;
 };
 
 export const CONCIERGE_LANG_STORAGE_KEY = 'property-nexus-concierge-lang';
@@ -87,6 +91,10 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
       'Legal and financing workflows in the UAE',
       'How to use the agent, developer, or lawyer portals',
     ],
+    historyTitle: 'Chat history',
+    newChat: 'New chat',
+    loginToSave: 'Log in to keep your chat history across devices.',
+    historyEmpty: 'No saved chats yet. Ask something to start.',
   },
   ar: {
     title: 'المساعد الذكي',
@@ -119,6 +127,10 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
       'الخطوات القانونية والتمويلية في الإمارات',
       'كيفية استخدام بوابات الوكلاء أو المطورين أو المحامين',
     ],
+    historyTitle: 'سجل المحادثات',
+    newChat: 'محادثة جديدة',
+    loginToSave: 'سجّل الدخول للاحتفاظ بسجل محادثاتك عبر الأجهزة.',
+    historyEmpty: 'لا توجد محادثات محفوظة بعد. ابدأ بسؤال.',
   },
   fr: {
     title: 'Concierge IA',
@@ -152,6 +164,10 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
       'Démarches juridiques et de financement aux Émirats',
       'Utilisation des portails agents, promoteurs ou avocats',
     ],
+    historyTitle: 'Historique des chats',
+    newChat: 'Nouveau chat',
+    loginToSave: 'Connectez-vous pour conserver votre historique sur tous vos appareils.',
+    historyEmpty: 'Aucun chat enregistré. Posez une question pour commencer.',
   },
   hi: {
     title: 'एआई कंसीयर्ज',
@@ -185,6 +201,10 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
       'यूएई में कानूनी और फाइनेंसिंग प्रक्रियाएँ',
       'एजेंट, डेवलपर या वकील पोर्टल कैसे इस्तेमाल करें',
     ],
+    historyTitle: 'चैट इतिहास',
+    newChat: 'नई चैट',
+    loginToSave: 'इतिहास सेव रखने के लिए लॉग इन करें।',
+    historyEmpty: 'अभी कोई सेव्ड चैट नहीं। शुरू करने के लिए कुछ पूछें।',
   },
 };
 

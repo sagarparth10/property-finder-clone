@@ -236,4 +236,48 @@ export const aiAPI = {
   },
 };
 
+export type ChatHistorySession = {
+  id: string;
+  title: string;
+  language?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ChatHistoryMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt?: string;
+};
+
+export const chatHistoryAPI = {
+  listSessions: async (): Promise<ChatHistorySession[]> => {
+    const response = await apiClient.get('/ai/chat/sessions');
+    return response.data;
+  },
+  createSession: async (payload?: {
+    title?: string;
+    language?: string;
+  }): Promise<ChatHistorySession> => {
+    const response = await apiClient.post('/ai/chat/sessions', payload || {});
+    return response.data;
+  },
+  getMessages: async (sessionId: string): Promise<ChatHistoryMessage[]> => {
+    const response = await apiClient.get(`/ai/chat/sessions/${sessionId}/messages`);
+    return response.data;
+  },
+  appendMessages: async (
+    sessionId: string,
+    messages: { role: 'user' | 'assistant'; content: string }[],
+    title?: string,
+  ): Promise<ChatHistoryMessage[]> => {
+    const response = await apiClient.post(`/ai/chat/sessions/${sessionId}/messages`, {
+      messages,
+      title,
+    });
+    return response.data;
+  },
+};
+
 export default apiClient;

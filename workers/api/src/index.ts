@@ -43,7 +43,8 @@ export default {
       return cors(request, env, res);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Server error';
-      const status = message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : 500;
+      const status =
+        message === 'Unauthorized' ? 401 : message === 'Forbidden' ? 403 : message === 'Not found' ? 404 : 500;
       return cors(request, env, json({ message }, status));
     }
   },
@@ -131,6 +132,23 @@ async function route(
   }
 
   if (method === 'POST' && path === '/api/v1/ai/chat') return aiChat(env, body || {});
+
+  if (path.startsWith('/api/v1/ai/chat/sessions')) {
+    const me = requireUser(user);
+    if (method === 'GET' && path === '/api/v1/ai/chat/sessions') {
+      return listChatSessions(env, me);
+    }
+    if (method === 'POST' && path === '/api/v1/ai/chat/sessions') {
+      return createChatSession(env, me, body || {});
+    }
+    const sessionMsgs = path.match(/^\/api\/v1\/ai\/chat\/sessions\/([^/]+)\/messages$/);
+    if (sessionMsgs && method === 'GET') {
+      return listChatMessages(env, me, sessionMsgs[1]);
+    }
+    if (sessionMsgs && method === 'POST') {
+      return appendChatMessages(env, me, sessionMsgs[1], body || {});
+    }
+  }
 
   return json({ message: 'Not found' }, 404);
 }
@@ -690,6 +708,76 @@ function scoreListingToLead(listing: any, lead: any) {
     }
   }
   return { score, reasons };
+}
+
+async function listChatSessions(env: Env, me: any) {
+  const rows = await sb(
+    env,
+    `chat_sessions?user_id=eq.${me.id}&order=updated_at.desc&limit=30`,
+  );
+  return json(asList(rows));
+}
+
+async function createChatSession(env: Env, me: any, body: any) {
+  const title = String(body?.title || 'New chat').slice(0, 120);
+  const language = String(body?.language || 'en').slice(0, 8);
+  const rows = await sb(env, 'chat_sessions', {
+    method: 'POST',
+    body: JSON.stringify({
+      user_id: me.id,
+      title,
+      language,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  return json(shape(asOne(rows)), 201);
+}
+
+async function requireChatSession(env: Env, me: any, sessionId: string) {
+  const row = await sbOne(env, `chat_sessions?id=eq.${sessionId}&user_id=eq.${me.id}`);
+  if (!row) throw new Error('Not found');
+  return shape(row);
+}
+
+async function listChatMessages(env: Env, me: any, sessionId: string) {
+  await requireChatSession(env, me, sessionId);
+  const rows = await sb(
+    env,
+    `chat_messages?session_id=eq.${sessionId}&order=created_at.asc`,
+  );
+  return json(asList(rows));
+}
+
+async function appendChatMessages(env: Env, me: any, sessionId: string, body: any) {
+  await requireChatSession(env, me, sessionId);
+  const incoming = Array.isArray(body?.messages) ? body.messages : [];
+  const payload = incoming
+    .filter((entry: any) => entry && (entry.role === 'user' || entry.role === 'assistant'))
+    .map((entry: any) => ({
+      session_id: sessionId,
+      role: entry.role,
+      content: String(entry.content || '').slice(0, 20000),
+    }))
+    .filter((entry: any) => entry.content.trim().length > 0);
+
+  if (!payload.length) return json({ message: 'No messages to save' }, 400);
+
+  const rows = await sb(env, 'chat_messages', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  const firstUser = payload.find((entry: any) => entry.role === 'user');
+  const patch: Record<string, string> = { updated_at: new Date().toISOString() };
+  if (body?.title) patch.title = String(body.title).slice(0, 120);
+  else if (firstUser) patch.title = firstUser.content.slice(0, 80);
+
+  await sb(env, `chat_sessions?id=eq.${sessionId}&user_id=eq.${me.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+
+  return json(asList(rows), 201);
 }
 
 async function aiChat(env: Env, body: any) {

@@ -2,19 +2,28 @@
 
 import Link from 'next/link';
 import { FormEvent, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ArrowRight, Mic, Send, Sparkles } from 'lucide-react';
 import {
   CONCIERGE_LANGS,
   ConciergeLang,
   getConciergeCopy,
   getSpeechLang,
+  storeConciergeLang,
 } from './conciergeI18n';
 
 interface AIAvatarProps {
-  onUserInput: (text: string, language: ConciergeLang) => void;
+  onUserInput?: (text: string, language: ConciergeLang) => void;
   avatarResponse: string | null;
   isListening: boolean;
   onLanguageChange?: (language: ConciergeLang) => void;
+}
+
+function buildAssistantHref(lang: ConciergeLang, prompt?: string) {
+  const params = new URLSearchParams();
+  params.set('lang', lang);
+  if (prompt?.trim()) params.set('prompt', prompt.trim());
+  return `/ai-assistant?${params.toString()}`;
 }
 
 export function AIAvatar({
@@ -23,6 +32,7 @@ export function AIAvatar({
   isListening,
   onLanguageChange,
 }: AIAvatarProps) {
+  const router = useRouter();
   const [listening, setListening] = useState(false);
   const [lang, setLang] = useState<ConciergeLang>('en');
   const [draft, setDraft] = useState('');
@@ -34,7 +44,15 @@ export function AIAvatar({
 
   const changeLang = (next: ConciergeLang) => {
     setLang(next);
+    storeConciergeLang(next);
     onLanguageChange?.(next);
+  };
+
+  const openFullChat = (text?: string) => {
+    const trimmed = text?.trim();
+    if (trimmed) onUserInput?.(trimmed, lang);
+    storeConciergeLang(lang);
+    router.push(buildAssistantHref(lang, trimmed));
   };
 
   useEffect(() => {
@@ -48,13 +66,14 @@ export function AIAvatar({
 
     recognitionRef.current.onresult = (event: any) => {
       const transcript = event.results[event.results.length - 1][0].transcript;
-      if (transcript) onUserInput(transcript, lang);
+      if (transcript) openFullChat(transcript);
     };
 
     recognitionRef.current.onend = () => {
       if (isListening) recognitionRef.current?.start();
     };
-  }, [onUserInput, isListening, speechLang, lang]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- speech wiring; openFullChat reads latest lang via closure on restart
+  }, [isListening, speechLang, lang]);
 
   useEffect(() => {
     if (!recognitionRef.current) return;
@@ -67,7 +86,6 @@ export function AIAvatar({
       setListening(true);
     } else if (!isListening && recognitionRef.current) {
       recognitionRef.current.stop();
-      setListening(false);
     }
   }, [isListening]);
 
@@ -80,16 +98,11 @@ export function AIAvatar({
     window.speechSynthesis.speak(utterance);
   }, [avatarResponse, speechLang]);
 
-  const submitPrompt = (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    onUserInput(trimmed, lang);
-    setDraft('');
-  };
-
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    submitPrompt(draft);
+    if (!draft.trim()) return;
+    openFullChat(draft);
+    setDraft('');
   };
 
   return (
@@ -138,7 +151,7 @@ export function AIAvatar({
             <button
               key={prompt}
               type="button"
-              onClick={() => submitPrompt(prompt)}
+              onClick={() => openFullChat(prompt)}
               className="rounded-full border border-primary-200/90 bg-white/90 px-3 py-1.5 text-left text-xs font-medium text-primary-800 shadow-sm transition hover:border-primary-400 hover:bg-primary-50 hover:text-primary-950"
             >
               {prompt}
@@ -175,7 +188,7 @@ export function AIAvatar({
 
         <div className="mt-3 flex justify-center">
           <Link
-            href={`/ai-assistant?lang=${lang}`}
+            href={buildAssistantHref(lang)}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary-700 transition hover:text-primary-900"
           >
             {copy.openFullChat}
