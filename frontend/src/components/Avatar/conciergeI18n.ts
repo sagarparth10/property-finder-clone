@@ -24,6 +24,7 @@ export type ConciergeCopy = {
   voiceOn: string;
   askAria: string;
   sendAria: string;
+  attachAria: string;
   greeting: string;
   panelSubtitle: string;
   thinking: string;
@@ -78,6 +79,7 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
     voiceOn: 'Voice on',
     askAria: 'Ask the AI concierge',
     sendAria: 'Send question',
+    attachAria: 'Attach images',
     greeting:
       "Hi there! I'm the Property Nexus AI concierge. Ask me about neighborhoods, investment yields, or how to collaborate with agents and lawyers.",
     panelSubtitle: 'Ask about listings, neighborhoods, and financing',
@@ -114,6 +116,7 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
     voiceOn: 'الصوت مفعّل',
     askAria: 'اسأل المساعد الذكي',
     sendAria: 'إرسال السؤال',
+    attachAria: 'إرفاق صور',
     greeting:
       'مرحباً! أنا مساعد Property Nexus الذكي. اسألني عن الأحياء أو عوائد الاستثمار أو التعاون مع الوكلاء والمحامين.',
     panelSubtitle: 'اسأل عن العقارات والأحياء والتمويل',
@@ -151,6 +154,7 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
     voiceOn: 'Voix active',
     askAria: 'Demander au concierge IA',
     sendAria: 'Envoyer la question',
+    attachAria: 'Joindre des images',
     greeting:
       'Bonjour ! Je suis le concierge IA Property Nexus. Parlez-moi de quartiers, de rendements ou de collaboration avec agents et avocats.',
     panelSubtitle: 'Annonces, quartiers et financement',
@@ -188,6 +192,7 @@ export const CONCIERGE_COPY: Record<ConciergeLang, ConciergeCopy> = {
     voiceOn: 'वॉइस चालू',
     askAria: 'एआई कंसीयर्ज से पूछें',
     sendAria: 'सवाल भेजें',
+    attachAria: 'छवियाँ संलग्न करें',
     greeting:
       'नमस्ते! मैं Property Nexus एआई कंसीयर्ज हूँ। इलाके, निवेश रिटर्न, या एजेंट/वकील सहयोग के बारे में पूछें।',
     panelSubtitle: 'लिस्टिंग, इलाके और फाइनेंसिंग के बारे में पूछें',

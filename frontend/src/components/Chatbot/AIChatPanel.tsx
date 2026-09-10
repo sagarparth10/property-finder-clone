@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { aiAPI, chatHistoryAPI, ChatHistorySession } from '@/utils/api';
 import { useAuth } from '@/context/AuthContext';
-import { Loader2, MessageSquare, Plus, Send, ShieldCheck, Sparkles } from 'lucide-react';
+import { Loader2, MessageSquare, Paperclip, Plus, Send, ShieldCheck, Sparkles, X } from 'lucide-react';
 import { ChatMarkdown } from './ChatMarkdown';
 import {
   CONCIERGE_LANGS,
@@ -23,11 +23,25 @@ export interface ConversationMessage {
 }
 
 const GUEST_CHAT_STORAGE_KEY = 'property-nexus-concierge-guest-chat';
+const MAX_CHAT_IMAGES = 4;
 
 const createId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || '');
+      const comma = result.indexOf(',');
+      resolve(comma !== -1 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error || new Error('Failed to read image'));
+    reader.readAsDataURL(file);
+  });
+}
 
 function greetingMessage(content: string): ConversationMessage {
   return {
@@ -84,12 +98,14 @@ export function AIChatPanel({ lang, copy, isRtl, onLangChange }: AIChatPanelProp
 
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [input, setInput] = useState('');
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatHistorySession[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const greetingLangRef = useRef<ConciergeLang | null>(null);
   const autoPromptDoneRef = useRef(false);
   const handleSendRef = useRef<(prompt?: string) => Promise<void>>(async () => undefined);
@@ -255,20 +271,44 @@ export function AIChatPanel({ lang, copy, isRtl, onLangChange }: AIChatPanelProp
     [user, sessionId, lang],
   );
 
+  const handleAttachImages = useCallback(async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const remaining = MAX_CHAT_IMAGES - pendingImages.length;
+    if (remaining <= 0) return;
+    const selected = Array.from(files)
+      .filter((f) => f.type.startsWith('image/'))
+      .slice(0, remaining);
+    if (selected.length === 0) return;
+    try {
+      const encoded = await Promise.all(selected.map(fileToBase64));
+      setPendingImages((prev) => [...prev, ...encoded].slice(0, MAX_CHAT_IMAGES));
+    } catch (err) {
+      console.error('Failed to read attached images', err);
+    }
+  }, [pendingImages.length]);
+
   const handleSend = useCallback(
     async (prompt?: string) => {
       const text = (prompt ?? input).trim();
-      if (!text || isLoading) return;
+      const imagesForSend = pendingImages;
+      if ((!text && imagesForSend.length === 0) || isLoading) return;
+
+      const displayText =
+        text ||
+        (imagesForSend.length > 0
+          ? `[Attached ${imagesForSend.length} image${imagesForSend.length > 1 ? 's' : ''}]`
+          : '');
 
       const userMessage: ConversationMessage = {
         id: createId(),
         role: 'user',
-        content: text,
+        content: displayText,
         timestamp: Date.now(),
       };
 
       setMessages((prev) => [...prev, userMessage]);
       setInput('');
+      setPendingImages([]);
       setError(null);
       setIsLoading(true);
 
@@ -290,9 +330,10 @@ export function AIChatPanel({ lang, copy, isRtl, onLangChange }: AIChatPanelProp
 
         let receivedToken = false;
         let assistantText = '';
-        const reply = await aiAPI.chatStream(text, {
+        const reply = await aiAPI.chatStream(text || displayText, {
           history,
           language: lang,
+          images: imagesForSend.length > 0 ? imagesForSend : undefined,
           onToken: (token) => {
             if (!receivedToken) {
               receivedToken = true;
@@ -316,14 +357,14 @@ export function AIChatPanel({ lang, copy, isRtl, onLangChange }: AIChatPanelProp
               msg.id === assistantId ? { ...msg, content: fallback } : msg,
             ),
           );
-          await persistExchange(text, fallback);
+          await persistExchange(displayText, fallback);
         } else {
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantId && !msg.content ? { ...msg, content: finalReply } : msg,
             ),
           );
-          await persistExchange(text, finalReply);
+          await persistExchange(displayText, finalReply);
         }
       } catch (err: unknown) {
         console.error('AI chat error', err);
@@ -333,7 +374,15 @@ export function AIChatPanel({ lang, copy, isRtl, onLangChange }: AIChatPanelProp
         setIsLoading(false);
       }
     },
-    [input, isLoading, chatHistoryForApi, lang, copy.errorContact, persistExchange],
+    [
+      input,
+      pendingImages,
+      isLoading,
+      chatHistoryForApi,
+      lang,
+      copy.errorContact,
+      persistExchange,
+    ],
   );
 
   handleSendRef.current = handleSend;
@@ -459,6 +508,31 @@ export function AIChatPanel({ lang, copy, isRtl, onLangChange }: AIChatPanelProp
             ))}
           </div>
 
+          {pendingImages.length > 0 ? (
+            <div className="mb-3 flex flex-wrap gap-2">
+              {pendingImages.map((b64, idx) => (
+                <div key={`${idx}-${b64.slice(0, 12)}`} className="relative h-14 w-14 overflow-hidden rounded-lg border border-gray-200">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={`data:image/jpeg;base64,${b64}`}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Remove image"
+                    onClick={() =>
+                      setPendingImages((prev) => prev.filter((_, i) => i !== idx))
+                    }
+                    className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           <form
             className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm"
             onSubmit={(event) => {
@@ -466,6 +540,26 @@ export function AIChatPanel({ lang, copy, isRtl, onLangChange }: AIChatPanelProp
               handleSend();
             }}
           >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                void handleAttachImages(event.target.files);
+                event.target.value = '';
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isLoading || pendingImages.length >= MAX_CHAT_IMAGES}
+              className="inline-flex items-center justify-center rounded-full p-2 text-gray-500 transition hover:bg-gray-100 hover:text-primary-700 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label={copy.attachAria}
+            >
+              <Paperclip className="h-4 w-4" />
+            </button>
             <textarea
               rows={1}
               value={input}
@@ -476,7 +570,7 @@ export function AIChatPanel({ lang, copy, isRtl, onLangChange }: AIChatPanelProp
             <button
               type="submit"
               className="inline-flex items-center justify-center rounded-full bg-primary-600 p-2 text-white transition hover:bg-primary-700 disabled:cursor-not-allowed disabled:bg-primary-200"
-              disabled={isLoading || input.trim().length === 0}
+              disabled={isLoading || (input.trim().length === 0 && pendingImages.length === 0)}
               aria-label={copy.sendAria}
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

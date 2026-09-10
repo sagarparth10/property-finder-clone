@@ -1,77 +1,73 @@
-# Faster AI Concierge (Ollama)
+# AI Concierge (Ollama agent)
 
-Production path: **Cloudflare Worker** (`POST /api/v1/ai/chat`) → **Ollama** (`/api/chat`).  
-There is no FastAPI sidecar; streaming is implemented on the Worker (and Nest for local Nest-only runs).
+Production path: **Cloudflare Worker** (`POST /api/v1/ai/chat`) → **`OLLAMA_AGENT_URL`** (`POST { prompt, images? }` → `{ answer }`).
 
-## What was slow
+Default agent URL: `https://ollama.cognaitive.in/agent`.
 
-1. **No streaming** — the API waited for the full completion (`stream: false`) before the UI showed anything.
-2. **Supabase seed/enrich on every API hit** — AI chat paid for unrelated DB round-trips before Ollama started.
-3. **Large default model** — `llama3:latest` (~8B) is slower than a small chat model.
-4. **Cold loads** — if the model unloaded between requests, the next reply waited for reload.
-5. **Remote Ollama latency** — `OLLAMA_BASE_URL` pointing at a tunnel adds RTT on top of generation.
+## Auth
 
-## What we changed
+The agent endpoint expects:
 
-- **SSE streaming** from Worker/Nest → browser (`text/event-stream`); tokens render as they arrive.
-- **Skip seed/media enrichment** for `/api/v1/ai/chat`.
-- **Shorter system prompt** + last **8** history turns (was unbounded / 12).
-- **Ollama options**: `keep_alive`, `num_predict`, `temperature` via Worker vars / `.env`.
-- Default model var: **`llama3.2:3b`** (override anytime).
-
-## Verify faster TTFT (time to first token)
-
-1. Open DevTools → Network → send a chat message.
-2. Select `POST .../api/v1/ai/chat`.
-3. Confirm **Response Headers**: `content-type: text/event-stream`.
-4. In the EventStream / preview pane, tokens should appear within ~1–3s (local) or a few seconds (remote), while the reply is still generating.
-5. UI should replace “thinking…” with streaming text instead of waiting for the full answer.
-
-Optional timing probe (local Ollama):
-
-```bash
-curl -N -X POST http://127.0.0.1:11434/api/chat \
-  -H "Content-Type: application/json" \
-  -d "{\"model\":\"llama3.2:3b\",\"stream\":true,\"keep_alive\":\"10m\",\"options\":{\"num_predict\":128},\"messages\":[{\"role\":\"user\",\"content\":\"Say hi in 5 words\"}]}"
+```
+Authorization: Bearer <secret>
 ```
 
-## Ollama host settings (do this on the machine running Ollama)
+Set the Worker secret (paste when prompted — never commit the value):
 
 ```bash
-# Pull a small, fast model (recommended for concierge chat)
-ollama pull llama3.2:3b
-
-# Optional: keep the process warm; set keep_alive via API (Worker already sends keep_alive)
-# Forever in RAM (use when you have enough VRAM/RAM):
-#   OLLAMA_KEEP_ALIVE=-1
-
-# Windows (PowerShell) — persist env for the Ollama service user, then restart Ollama:
-setx OLLAMA_KEEP_ALIVE "-1"
-# Or for current session before starting `ollama serve`:
-$env:OLLAMA_KEEP_ALIVE = "-1"
+cd workers/api
+npx wrangler secret put OLLAMA_API_SECRET
 ```
 
-Also useful:
+GitHub Actions deploy only needs `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID`. Worker secrets like `OLLAMA_API_SECRET` live in Cloudflare and persist across `wrangler deploy`; you do **not** put the secret in the workflow YAML.
 
-| Setting | Suggested | Why |
-|--------|-----------|-----|
-| Model | `llama3.2:3b` or `phi3:mini` | Much faster TTFT than `llama3:latest` |
-| `OLLAMA_KEEP_ALIVE` | `10m` or `-1` | Avoid unload/cold start |
-| `OLLAMA_NUM_PREDICT` | `256`–`384` | Cap long answers |
-| `OLLAMA_TEMPERATURE` | `0.5`–`0.7` | Slightly lower = snappier / less rambling |
-| Local URL | `http://127.0.0.1:11434` | Fastest; avoid remote tunnel when developing |
+Local Nest / Worker: put `OLLAMA_API_SECRET=...` in `backend/.env` or `workers/api/.dev.vars` (both gitignored).
+
+**If a key was ever pasted in chat, rotate it** on the agent host and re-run `wrangler secret put OLLAMA_API_SECRET`.
+
+## Request / response
+
+Worker → agent:
+
+```json
+{
+  "prompt": "…system + history + user message…",
+  "images": ["base64…"]
+}
+```
+
+`images` is omitted when the chat is text-only.
+
+Agent → Worker:
+
+```json
+{ "answer": "…" }
+```
+
+Browser → Worker still uses `/api/v1/ai/chat` with `{ message, history?, language?, images?, stream? }`.  
+The agent API is **JSON-only** (non-streaming). When `stream: true` (default), the Worker returns SSE with **one** `content` event containing the full `answer`, then `done`.
+
+## Latency notes
+
+1. Skip seed/media enrichment for `/api/v1/ai/chat`.
+2. Last **8** history turns folded into `prompt`.
+3. Up to **4** images (base64) from the chat UI paperclip control.
 
 ## Worker / env vars
 
-`workers/api/wrangler.jsonc` `vars` (or secrets for URL):
+`workers/api/wrangler.jsonc` `vars`:
 
 ```
-OLLAMA_BASE_URL=https://ollama.cognaitive.in   # or http://127.0.0.1:11434 for local
-OLLAMA_MODEL=llama3.2:3b
-OLLAMA_KEEP_ALIVE=10m
-OLLAMA_NUM_PREDICT=384
-OLLAMA_TEMPERATURE=0.6
+OLLAMA_AGENT_URL=https://ollama.cognaitive.in/agent
 ```
+
+Secrets (Wrangler):
+
+```
+OLLAMA_API_SECRET   # Bearer token — wrangler secret put
+```
+
+Optional legacy vars (`OLLAMA_MODEL`, `OLLAMA_KEEP_ALIVE`, …) are unused by the agent path.
 
 After changing vars:
 
@@ -80,9 +76,7 @@ cd workers/api
 npx wrangler deploy
 ```
 
-Ensure the Ollama host has pulled the same model name as `OLLAMA_MODEL`.
+## API contract (browser ↔ Worker)
 
-## API contract
-
-- Default: **SSE** stream. Each event: `data: {"content":"..."}\n\n`, then `data: {"done":true}\n\n`.
-- Non-stream JSON (legacy): POST body `{ "stream": false }` → `{ "response": "..." }`.
+- Default: **SSE**. Events: `data: {"content":"..."}\n\n`, then `data: {"done":true}\n\n` (content is typically one full answer).
+- Non-stream JSON: POST body `{ "stream": false }` → `{ "response": "..." }`.

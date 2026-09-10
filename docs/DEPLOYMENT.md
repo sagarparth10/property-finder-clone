@@ -50,10 +50,13 @@ cd workers/api
 npx wrangler secret put SUPABASE_URL
 npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 npx wrangler secret put JWT_SECRET
-# optional — see docs/OLLAMA_PERFORMANCE.md
-npx wrangler secret put OLLAMA_BASE_URL
-# OLLAMA_MODEL / OLLAMA_KEEP_ALIVE / OLLAMA_NUM_PREDICT / OLLAMA_TEMPERATURE
-# are plain vars in wrangler.jsonc (redeploy after changing).
+npx wrangler secret put OLLAMA_API_SECRET
+# optional override (default is set in wrangler.jsonc vars):
+# npx wrangler secret put OLLAMA_AGENT_URL
 ```
 
-See `workers/api/.dev.vars.example` for local development and `docs/OLLAMA_PERFORMANCE.md` for streaming / faster models.
+`OLLAMA_API_SECRET` is sent as `Authorization: Bearer …` to the agent. Paste when prompted; never commit the value. Rotate the key if it was shared in chat.
+
+GitHub Actions only needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` for deploy — Worker secrets persist in Cloudflare and are not re-uploaded by the workflow.
+
+See `workers/api/.dev.vars.example` for local development and `docs/OLLAMA_PERFORMANCE.md` for the agent contract.

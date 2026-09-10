@@ -15,21 +15,22 @@ export class AIController {
   constructor(private readonly aiService: AIService) {}
 
   @Post('chat')
-  @ApiOperation({ summary: 'Chat with AI avatar (SSE stream by default)' })
+  @ApiOperation({ summary: 'Chat with AI avatar (SSE: one chunk from agent JSON)' })
   async chat(
     @Body()
     body: {
       message: string;
       language?: string;
       history?: ChatHistoryEntry[];
+      images?: string[];
       stream?: boolean;
     },
     @Res({ passthrough: false }) res: Response,
   ) {
-    const { message, language, history = [], stream = true } = body;
+    const { message, language, history = [], images, stream = true } = body;
 
     if (stream === false) {
-      const response = await this.aiService.chat(message, language, history);
+      const response = await this.aiService.chat(message, language, history, images);
       return res.json({ response });
     }
 
@@ -41,7 +42,7 @@ export class AIController {
 
     await this.aiService.chatStream(message, language, history, (token) => {
       res.write(`data: ${JSON.stringify({ content: token })}\n\n`);
-    });
+    }, images);
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();
   }

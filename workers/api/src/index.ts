@@ -780,100 +780,48 @@ async function appendChatMessages(env: Env, me: any, sessionId: string, body: an
   return json(asList(rows), 201);
 }
 
-async function aiChat(env: Env, body: any) {
-  const base = (env.OLLAMA_BASE_URL || 'https://ollama.cognaitive.in').replace(/\/$/, '');
-  const model = env.OLLAMA_MODEL || 'llama3.2:3b';
-  const keepAlive = env.OLLAMA_KEEP_ALIVE || '10m';
-  const numPredict = Number(env.OLLAMA_NUM_PREDICT || 384);
-  const temperature = Number(env.OLLAMA_TEMPERATURE || 0.6);
-  const wantStream = body?.stream !== false;
-  const history = Array.isArray(body.history) ? body.history : [];
-  const lang = String(body.language || 'en').toUpperCase();
-
-  const messages = [
-    {
-      role: 'system',
-      content: `You are Property Nexus, a concise UAE real-estate concierge. Prefer short, actionable answers. Reply in ${lang} when appropriate.`,
-    },
-    ...history
-      .filter((entry: any) => entry.role === 'assistant' || entry.role === 'user')
-      .slice(-8)
-      .map((entry: any) => ({ role: entry.role, content: entry.content })),
-    { role: 'user', content: String(body.message || '') },
+function buildAgentPrompt(message: string, language: string, history: any[]): string {
+  const lang = String(language || 'en').toUpperCase();
+  const lines = [
+    `You are Property Nexus, a concise UAE real-estate concierge. Prefer short, actionable answers. Reply in ${lang} when appropriate.`,
+    '',
   ];
-
-  const ollamaPayload = {
-    model,
-    stream: wantStream,
-    keep_alive: keepAlive,
-    options: {
-      temperature: Number.isFinite(temperature) ? temperature : 0.6,
-      num_predict: Number.isFinite(numPredict) && numPredict > 0 ? numPredict : 384,
-    },
-    messages,
-  };
-
-  const res = await fetch(`${base}/api/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(ollamaPayload),
-  });
-
-  if (!res.ok) {
-    return json({ response: 'I am having trouble reaching the AI engine right now.' });
+  for (const entry of history
+    .filter((e: any) => e?.role === 'assistant' || e?.role === 'user')
+    .slice(-8)) {
+    const label = entry.role === 'user' ? 'User' : 'Assistant';
+    lines.push(`${label}: ${String(entry.content || '')}`);
   }
+  lines.push(`User: ${String(message || '')}`);
+  lines.push('Assistant:');
+  return lines.join('\n');
+}
 
-  if (!wantStream) {
-    const data: any = await res.json();
-    return json({
-      response: data?.message?.content || 'I could not generate a response at the moment.',
-    });
+/** Normalize client image payloads to raw base64 (strip data-URL prefix). Cap count. */
+function normalizeAgentImages(raw: unknown): string[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const out: string[] = [];
+  for (const item of raw.slice(0, 4)) {
+    const s = String(item || '').trim();
+    if (!s) continue;
+    const comma = s.indexOf(',');
+    const b64 =
+      s.startsWith('data:') && comma !== -1 ? s.slice(comma + 1).trim() : s;
+    if (b64.length > 0) out.push(b64);
   }
+  return out.length > 0 ? out : undefined;
+}
 
-  if (!res.body) {
-    return json({ response: 'I could not generate a response at the moment.' });
-  }
-
-  // Proxy Ollama NDJSON → SSE so the browser can render tokens as they arrive (faster TTFT).
+function sseAnswer(answer: string): Response {
+  const encoder = new TextEncoder();
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
   const writer = writable.getWriter();
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
-
   (async () => {
-    const reader = res.body!.getReader();
-    let buffer = '';
     try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed) continue;
-          try {
-            const chunk = JSON.parse(trimmed) as {
-              message?: { content?: string };
-              done?: boolean;
-            };
-            const content = chunk?.message?.content;
-            if (typeof content === 'string' && content.length > 0) {
-              await writer.write(encoder.encode(`data: ${JSON.stringify({ content })}\n\n`));
-            }
-            if (chunk.done) {
-              await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
-            }
-          } catch {
-            // skip malformed NDJSON lines
-          }
-        }
+      if (answer) {
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ content: answer })}\n\n`));
       }
-    } catch {
-      await writer.write(
-        encoder.encode(`data: ${JSON.stringify({ error: 'stream_failed' })}\n\n`),
-      );
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
     } finally {
       try {
         await writer.close();
@@ -882,7 +830,6 @@ async function aiChat(env: Env, body: any) {
       }
     }
   })();
-
   return new Response(readable, {
     status: 200,
     headers: {
@@ -892,6 +839,57 @@ async function aiChat(env: Env, body: any) {
       'X-Accel-Buffering': 'no',
     },
   });
+}
+
+async function aiChat(env: Env, body: any) {
+  const agentUrl = (
+    env.OLLAMA_AGENT_URL ||
+    'https://ollama.cognaitive.in/agent'
+  ).replace(/\/$/, '');
+  const wantStream = body?.stream !== false;
+  const history = Array.isArray(body.history) ? body.history : [];
+  const prompt = buildAgentPrompt(String(body.message || ''), body.language || 'en', history);
+  const images = normalizeAgentImages(body.images);
+
+  const payload: { prompt: string; images?: string[] } = { prompt };
+  if (images) payload.images = images;
+
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  const secret = (env.OLLAMA_API_SECRET || '').trim();
+  if (secret) {
+    headers.Authorization = `Bearer ${secret}`;
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(agentUrl, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return json({ response: 'I am having trouble reaching the AI engine right now.' });
+  }
+
+  if (!res.ok) {
+    return json({ response: 'I am having trouble reaching the AI engine right now.' });
+  }
+
+  let data: { answer?: string } = {};
+  try {
+    data = (await res.json()) as { answer?: string };
+  } catch {
+    return json({ response: 'I could not generate a response at the moment.' });
+  }
+
+  const answer =
+    typeof data?.answer === 'string' && data.answer.trim().length > 0
+      ? data.answer.trim()
+      : 'I could not generate a response at the moment.';
+
+  // Agent endpoint returns full JSON (non-streaming). Keep SSE to the browser as one chunk.
+  if (wantStream) return sseAnswer(answer);
+  return json({ response: answer });
 }
 
 const VILLA_DEMO_API_ID = 'e76b5ab7-b3d0-43a2-ba28-11b4bb5dfd89';

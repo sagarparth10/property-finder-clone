@@ -127,26 +127,29 @@ export const aiAPI = {
     options?: {
       language?: string;
       history?: { role: 'assistant' | 'user'; content: string }[];
+      images?: string[];
     },
   ) => {
     const response = await apiClient.post('/ai/chat', {
       message,
       language: options?.language,
       history: options?.history,
+      images: options?.images,
       stream: false,
     });
     return response.data;
   },
 
   /**
-   * Stream tokens via SSE (Worker/Nest → Ollama). Falls back to JSON if the
-   * server returns application/json. Call onToken for each chunk to improve TTFT UX.
+   * Chat via Worker → ollama.cognaitive.in/agent.
+   * Upstream is JSON-only; Worker may still reply as SSE (one content chunk) or JSON.
    */
   chatStream: async (
     message: string,
     options?: {
       language?: string;
       history?: { role: 'assistant' | 'user'; content: string }[];
+      images?: string[];
       signal?: AbortSignal;
       onToken?: (token: string) => void;
     },
@@ -160,17 +163,22 @@ export const aiAPI = {
       if (token) headers.Authorization = `Bearer ${token}`;
     }
 
+    const body: Record<string, unknown> = {
+      message,
+      language: options?.language,
+      history: options?.history,
+      stream: true,
+    };
+    if (options?.images && options.images.length > 0) {
+      body.images = options.images;
+    }
+
     const res = await fetch(`${API_BASE_URL}/ai/chat`, {
       method: 'POST',
       headers,
       credentials: 'include',
       signal: options?.signal,
-      body: JSON.stringify({
-        message,
-        language: options?.language,
-        history: options?.history,
-        stream: true,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!res.ok) {

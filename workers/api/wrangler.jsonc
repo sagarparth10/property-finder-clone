@@ -24,6 +24,7 @@
   },
   "vars": {
     "FRONTEND_URL": "https://property.cognaitive.in",
+    "OLLAMA_AGENT_URL": "https://ollama.cognaitive.in/agent",
     "OLLAMA_MODEL": "llama3.2:3b",
     "OLLAMA_KEEP_ALIVE": "10m",
     "OLLAMA_NUM_PREDICT": "384",
