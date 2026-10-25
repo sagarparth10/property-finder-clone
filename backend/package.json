@@ -86,6 +86,7 @@
     "typescript": "^5.3.3"
   },
   "overrides": {
-    "proxy-addr": "2.0.8"
+    "body-parser": "1.20.9",
+    "fast-uri": "3.1.9"
   }
 }
