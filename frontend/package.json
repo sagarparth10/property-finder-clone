@@ -48,5 +48,8 @@
     "eslint": "^8.55.0",
     "eslint-config-next": "^14.0.0",
     "typescript": "^5.3.3"
+  },
+  "overrides": {
+    "postcss-selector-parser": "6.1.5"
   }
 }
