@@ -82,7 +82,7 @@
     "typescript": "^5.3.3"
   },
   "engines": {
-    "node": ">=22.23.4"
+    "node": ">=22.23.5"
   },
   "overrides": {
     "axios": "$axios",
