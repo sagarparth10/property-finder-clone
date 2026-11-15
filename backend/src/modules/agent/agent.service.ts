@@ -12,11 +12,11 @@ export class AgentService {
   ) {}
 
   async findAll(): Promise<Agent[]> {
-    return this.agentModel.find({ active: true }).populate('userId').exec();
+    return this.agentModel.find({ active: true }).populate({ path: 'userId', select: '-password' }).exec();
   }
 
   async findOne(id: string): Promise<Agent> {
-    return this.agentModel.findById(id).populate('userId').exec();
+    return this.agentModel.findById(id).populate({ path: 'userId', select: '-password' }).exec();
   }
 
   async getListings(agentId: string) {
